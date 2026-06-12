@@ -53,3 +53,7 @@ This is an **Angular 22 SSR application** using the standalone component model (
 ## Code style
 
 Prettier is configured with single quotes and 100-character line width (`.prettierrc`). TypeScript strict flags are on: `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, `noPropertyAccessFromIndexSignature`.
+
+## External references
+
+See [`.claude/external.md`](.claude/external.md) for official documentation links and best practices sourced from external resources (Angular, TypeScript, Vitest, Conventional Commits).
