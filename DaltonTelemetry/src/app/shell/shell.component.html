@@ -1,0 +1,77 @@
+<mat-sidenav-container class="shell-container">
+
+  <mat-sidenav [opened]="sidenavOpen()" mode="side" class="shell-sidenav">
+    <div class="sidenav-brand">
+      <mat-icon class="brand-icon">satellite_alt</mat-icon>
+      <span class="brand-name">DaltonTelemetry</span>
+    </div>
+
+    <mat-divider />
+
+    <mat-tree [dataSource]="navTree" [childrenAccessor]="childrenAccessor" class="nav-tree">
+
+      <!-- Group nodes (has children) -->
+      <mat-tree-node
+        *matTreeNodeDef="let node; when: hasChild"
+        matTreeNodePadding
+        #nodeRef="matTreeNode"
+      >
+        <button matTreeNodeToggle class="nav-group" [attr.aria-label]="'Toggle ' + node.label">
+          <mat-icon class="nav-icon">{{ node.icon }}</mat-icon>
+          <span class="nav-label">{{ node.label }}</span>
+          <mat-icon class="expand-icon">
+            {{ nodeRef.isExpanded ? 'expand_less' : 'expand_more' }}
+          </mat-icon>
+        </button>
+      </mat-tree-node>
+
+      <!-- Leaf nodes -->
+      <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
+        <a
+          [routerLink]="node.route"
+          routerLinkActive="nav-active"
+          class="nav-item"
+          [matTooltip]="node.label"
+          matTooltipPosition="right"
+          [matTooltipDisabled]="sidenavOpen()"
+        >
+          <mat-icon class="nav-icon">{{ node.icon }}</mat-icon>
+          <span class="nav-label">{{ node.label }}</span>
+        </a>
+      </mat-tree-node>
+
+    </mat-tree>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="shell-content">
+
+    <mat-toolbar class="shell-toolbar">
+      <button
+        mat-icon-button
+        (click)="toggleSidenav()"
+        aria-label="Toggle navigation"
+        matTooltip="Toggle menu"
+      >
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span class="toolbar-title">DaltonTelemetry</span>
+      <span class="toolbar-spacer"></span>
+      <button mat-icon-button aria-label="Notifications" matTooltip="Notifications">
+        <mat-icon>notifications_none</mat-icon>
+      </button>
+      <button mat-icon-button aria-label="Account" matTooltip="Account">
+        <mat-icon>account_circle</mat-icon>
+      </button>
+    </mat-toolbar>
+
+    <main class="shell-main">
+      <router-outlet />
+    </main>
+
+    <footer class="shell-footer">
+      <span>© 2026 DaltonTelemetry. All rights reserved.</span>
+    </footer>
+
+  </mat-sidenav-content>
+
+</mat-sidenav-container>
