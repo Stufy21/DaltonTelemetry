@@ -43,18 +43,16 @@ export class ShellComponent {
       children: [
         { label: 'Overview', icon: 'pie_chart', route: '/telemetry/overview' },
         { label: 'Live Feed', icon: 'stream', route: '/telemetry/live' },
-        { label: 'History', icon: 'history', route: '/telemetry/history' },
       ],
     },
     {
       label: 'Reports',
       icon: 'summarize',
       children: [
-        { label: 'Summary', icon: 'description', route: '/reports/summary' },
-        { label: 'Detailed', icon: 'table_view', route: '/reports/detailed' },
+        { label: 'Statistics', icon: 'description', route: '/reports/stats' },
+        // { label: 'Detailed', icon: 'table_view', route: '/reports/detailed' },
       ],
     },
-    { label: 'Settings', icon: 'settings', route: '/settings' },
   ];
 
   readonly childrenAccessor = (node: NavNode) => node.children ?? [];
