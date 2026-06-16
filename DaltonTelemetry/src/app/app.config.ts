@@ -10,9 +10,6 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     provideClientHydration(),
-<<<<<<< HEAD
-=======
     provideHttpClient(),
->>>>>>> 24c7b04 (wip: add Ergast API integration and statistics component scaffold)
   ],
 };

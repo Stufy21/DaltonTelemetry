@@ -1,9 +1,15 @@
-<mat-grid-list cols="1" rowHeight="150px">
+<mat-grid-list cols="1" rowHeight="200px" class="circuit-grid">
 @for (circuit of circuits(); track circuit) {
     <mat-grid-tile
-      [colspan]="1"
-      [style.backgroundColor]="969696">
-        {{circuit.circuitName}} ({{circuit.Location.locality}}, {{circuit.Location.country}})
+      [colspan]="1">
+         <mat-card class="circuit-card" appearance="outlined">
+          <mat-card-header>
+            <div mat-card-avatar class="example-header-image"></div>
+            <mat-card-title>{{circuits().indexOf(circuit) + 1}}. {{circuit.circuitName}}</mat-card-title>
+            <mat-card-subtitle style="align-items: center;">{{circuit.Location.locality}}, {{circuit.Location.country}}</mat-card-subtitle>
+          </mat-card-header>
+          <img mat-card-image [src]="circuit.photoUrl" width="6%" alt="Photo circuit">
+        </mat-card>
     </mat-grid-tile>
   }
 </mat-grid-list>
