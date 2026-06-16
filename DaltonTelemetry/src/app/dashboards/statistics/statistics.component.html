@@ -1,0 +1,9 @@
+<mat-grid-list cols="1" rowHeight="150px">
+@for (circuit of circuits(); track circuit) {
+    <mat-grid-tile
+      [colspan]="1"
+      [style.backgroundColor]="969696">
+        {{circuit.circuitName}} ({{circuit.Location.locality}}, {{circuit.Location.country}})
+    </mat-grid-tile>
+  }
+</mat-grid-list>
