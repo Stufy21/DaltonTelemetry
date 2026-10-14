@@ -1,0 +1,67 @@
+<div class="board" role="table" aria-label="Live timing leaderboard">
+  <div class="row head" role="row">
+    <span class="c-pos" role="columnheader">Pos</span>
+    <span class="c-driver" role="columnheader">Driver</span>
+    <span class="c-tyre" role="columnheader">Tyre</span>
+    <span class="c-pits" role="columnheader">Pits</span>
+    <span class="c-gap" role="columnheader">Gap</span>
+    <span class="c-int" role="columnheader">Int</span>
+    <span class="c-lap" role="columnheader">Last lap</span>
+    <span class="c-lap" role="columnheader">Best lap</span>
+    <span class="c-sector" role="columnheader">S1</span>
+    <span class="c-sector" role="columnheader">S2</span>
+    <span class="c-sector" role="columnheader">S3</span>
+  </div>
+
+  @for (row of rows(); track row.driverNumber) {
+    <div
+      class="row"
+      role="row"
+      [class.in-pit]="row.inPit"
+      [class.selected]="slot(row.driverNumber) !== null"
+      [attr.data-pos]="row.position"
+      [attr.aria-selected]="slot(row.driverNumber) !== null"
+      tabindex="0"
+      title="Click to compare this driver"
+      (click)="select.emit(row.driverNumber)"
+      (keydown.enter)="select.emit(row.driverNumber)"
+    >
+      <span class="c-pos" role="cell"
+        ><span>{{ row.position ?? '–' }}</span></span
+      >
+      <span class="c-driver" role="cell" [title]="row.fullName + ' · ' + row.teamName">
+        <span class="team-bar" [style.background]="row.teamColour"></span>
+        <span class="acronym">{{ row.acronym }}</span>
+        @if (slot(row.driverNumber); as s) {
+          <span class="slot">{{ s }}</span>
+        }
+        <span class="number">{{ row.driverNumber }}</span>
+        @if (row.inPit) {
+          <span class="pit-badge">PIT</span>
+        }
+      </span>
+      <span class="c-tyre" role="cell">
+        @if (row.compound) {
+          <span class="tyre" [attr.data-compound]="row.compound">{{
+            compoundLetter(row.compound)
+          }}</span>
+          <span class="tyre-age">{{ row.tyreAge }}L</span>
+        } @else {
+          <span class="muted">–</span>
+        }
+      </span>
+      <span class="c-pits" role="cell">{{ row.pitStops }}</span>
+      <span class="c-gap" role="cell">{{ row.gap }}</span>
+      <span class="c-int" role="cell">{{ row.interval }}</span>
+      <span class="c-lap" role="cell" [attr.data-tone]="row.lastLapTone">{{
+        lap(row.lastLap)
+      }}</span>
+      <span class="c-lap" role="cell">{{ lap(row.bestLap) }}</span>
+      @for (s of row.sectors; track $index) {
+        <span class="c-sector" role="cell" [attr.data-tone]="s.tone">{{ sector(s.time) }}</span>
+      }
+    </div>
+  } @empty {
+    <div class="empty">No timing data for this session yet.</div>
+  }
+</div>

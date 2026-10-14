@@ -1,0 +1,20 @@
+<div class="flag-strip" role="list" aria-label="Flags and safety cars">
+  @for (seg of segments(); track seg.from + seg.tone) {
+    <button
+      type="button"
+      class="flag-seg"
+      role="listitem"
+      [attr.data-tone]="seg.tone"
+      [style.left.%]="pct(seg.from)"
+      [style.width.%]="width(seg)"
+      [matTooltip]="seg.label"
+      [attr.aria-label]="seg.label + ' — jump to this moment'"
+      (click)="seekTo.emit(seg.from)"
+    ></button>
+  }
+</div>
+<ul class="flag-legend">
+  @for (item of legend(); track item.tone) {
+    <li><span class="swatch" [attr.data-tone]="item.tone"></span>{{ item.label }}</li>
+  }
+</ul>

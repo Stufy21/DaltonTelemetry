@@ -1,0 +1,30 @@
+@if (outline().length > 1) {
+  <svg
+    [attr.viewBox]="viewBox()"
+    preserveAspectRatio="xMidYMid meet"
+    role="img"
+    aria-label="Track map"
+  >
+    <path class="asphalt" [attr.d]="path()" [attr.stroke-width]="unit() * 0.03" />
+    <path class="line" [attr.d]="path()" [attr.stroke-width]="unit() * 0.008" />
+
+    @for (car of cars(); track car.driverNumber) {
+      <g [attr.transform]="'translate(' + car.x + ' ' + -car.y + ')'">
+        <circle
+          [attr.r]="unit() * 0.016"
+          [attr.fill]="car.colour"
+          [attr.stroke-width]="unit() * 0.004"
+          class="car"
+        />
+        <text [attr.y]="-unit() * 0.026" [attr.font-size]="unit() * 0.03" text-anchor="middle">
+          {{ car.acronym }}
+        </text>
+      </g>
+    }
+  </svg>
+  @if (paused()) {
+    <p class="note">Car positions are paused above 10× to stay within the API limits.</p>
+  }
+} @else {
+  <p class="empty">The circuit appears once a lap has been recorded.</p>
+}

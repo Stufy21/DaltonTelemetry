@@ -1,0 +1,43 @@
+<svg viewBox="-112 -112 224 224" role="img" [attr.aria-label]="name() + ' telemetry'">
+  <defs>
+    <path [attr.id]="uid + '-t'" [attr.d]="throttleLabelPath" />
+    <path [attr.id]="uid + '-b'" [attr.d]="brakeLabelPath" />
+  </defs>
+
+  <!-- speed dial -->
+  <path class="track thin" [attr.d]="speedTrack" />
+  @if (speedArc()) {
+    <path class="speed" [attr.d]="speedArc()" [style.stroke]="colour()" />
+  }
+  @for (t of ticks; track t.v) {
+    <line class="tick" [attr.x1]="t.x1" [attr.y1]="t.y1" [attr.x2]="t.x2" [attr.y2]="t.y2" />
+    <text class="tick-label" [attr.x]="t.lx" [attr.y]="t.ly">{{ t.v }}</text>
+  }
+
+  <!-- throttle (left) and brake (right) -->
+  <path class="track band" [attr.d]="throttleTrack" />
+  @if (throttleArc()) {
+    <path class="band throttle" [attr.d]="throttleArc()" />
+  }
+  <text class="band-label">
+    <textPath [attr.href]="'#' + uid + '-t'" startOffset="50%">THROTTLE</textPath>
+  </text>
+
+  <path class="track band" [attr.d]="brakeTrack" />
+  @if (brakeArc()) {
+    <path class="band brake" [attr.d]="brakeArc()" />
+  }
+  <text class="band-label">
+    <textPath [attr.href]="'#' + uid + '-b'" startOffset="50%">BRAKE</textPath>
+  </text>
+
+  <!-- readouts -->
+  <text class="speed-value" x="0" y="2">{{ speedText() }}</text>
+  <text class="unit" x="0" y="15">KM/H</text>
+  <text class="rpm-value" x="0" y="40">{{ rpmText() }}</text>
+  <text class="unit" x="0" y="51">RPM</text>
+  <text class="gear" x="0" y="76">
+    <tspan class="gear-key">GEAR</tspan>
+    {{ gearText() }}
+  </text>
+</svg>

@@ -1,0 +1,221 @@
+<section class="lt" [class.has-sheet]="cmp.selected().length > 0 && !cmp.collapsed()">
+  <header class="lt-header">
+    <div class="pickers">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="picker year">
+        <mat-label>Season</mat-label>
+        <mat-select [value]="store.year()" (selectionChange)="store.loadYear($event.value)">
+          @for (y of store.years; track y) {
+            <mat-option [value]="y">{{ y }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="picker session">
+        <mat-label>Session</mat-label>
+        <mat-select
+          [value]="store.session()"
+          [compareWith]="compareSessions"
+          (selectionChange)="store.selectSession($event.value)"
+        >
+          @for (s of store.sessions(); track s.session_key) {
+            <mat-option [value]="s">{{ sessionLabel(s) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="layout-controls">
+      <button mat-stroked-button [matMenuTriggerFor]="widgetsMenu">
+        <mat-icon>dashboard_customize</mat-icon>Widgets
+      </button>
+      <mat-menu #widgetsMenu="matMenu">
+        @for (id of widgetIds; track id) {
+          <button mat-menu-item (click)="layout.toggle(id)">
+            <mat-icon>{{
+              layout.isVisible(id) ? 'check_box' : 'check_box_outline_blank'
+            }}</mat-icon>
+            <span>{{ titles[id] }}</span>
+          </button>
+        }
+        <mat-divider />
+        <button mat-menu-item (click)="layout.reset()">
+          <mat-icon>restart_alt</mat-icon>
+          <span>Reset layout</span>
+        </button>
+      </mat-menu>
+    </div>
+
+    <div class="stats">
+      @if (store.sessionLive()) {
+        <span class="badge live"
+          ><span class="dot"></span>{{ store.following() ? 'LIVE' : 'LIVE · behind' }}</span
+        >
+      } @else if (store.session()) {
+        <span class="badge replay">REPLAY</span>
+      }
+
+      <span
+        class="badge status"
+        [attr.data-tone]="store.trackStatus().tone"
+        matTooltip="Track status"
+      >
+        {{ store.trackStatus().label }}
+      </span>
+
+      <div class="stat">
+        <span class="stat-label">Lap</span>
+        <span class="stat-value">
+          {{ store.lap() || '–' }}
+          @if (store.totalLaps()) {
+            <span class="of"> / {{ store.totalLaps() }}</span>
+          }
+        </span>
+      </div>
+
+      <div class="stat">
+        <span class="stat-label">Session time</span>
+        <span class="stat-value">{{ elapsed(store.elapsed()) }}</span>
+      </div>
+
+      @if (store.weather(); as w) {
+        <div
+          class="stat"
+          matTooltip="Wind {{ w.wind_speed }} m/s {{
+            windDirection(w.wind_direction)
+          }} · Humidity {{ w.humidity }}%"
+        >
+          <span class="stat-label">Air / Track</span>
+          <span class="stat-value"
+            >{{ w.air_temperature | number: '1.0-0' }}° /
+            {{ w.track_temperature | number: '1.0-0' }}°</span
+          >
+        </div>
+        @if (w.rainfall) {
+          <mat-icon class="rain" matTooltip="Rain">water_drop</mat-icon>
+        }
+      }
+    </div>
+  </header>
+
+  @if (store.error(); as err) {
+    <div class="banner error" role="alert"><mat-icon>error_outline</mat-icon>{{ err }}</div>
+  }
+  @if (store.liveError(); as err) {
+    <div class="banner warn" role="status"><mat-icon>sync_problem</mat-icon>{{ err }}</div>
+  }
+
+  @if (store.session()) {
+    <div class="playback">
+      @if (store.sessionLive()) {
+        <button mat-flat-button [disabled]="store.following()" (click)="store.goLive()">
+          <mat-icon>sensors</mat-icon>Go live
+        </button>
+      }
+      <button
+        mat-icon-button
+        (click)="store.jumpToStart()"
+        matTooltip="Back to start"
+        aria-label="Back to start"
+      >
+        <mat-icon>first_page</mat-icon>
+      </button>
+      <button
+        mat-icon-button
+        [disabled]="store.following()"
+        (click)="store.togglePlay()"
+        [matTooltip]="store.playing() ? 'Pause' : 'Play'"
+        [attr.aria-label]="store.playing() ? 'Pause' : 'Play'"
+      >
+        <mat-icon>{{ store.playing() ? 'pause' : 'play_arrow' }}</mat-icon>
+      </button>
+      <button
+        mat-icon-button
+        (click)="store.jumpToEnd()"
+        matTooltip="Jump to end"
+        aria-label="Jump to end"
+      >
+        <mat-icon>last_page</mat-icon>
+      </button>
+
+      <div class="timeline-wrap">
+        <mat-slider
+          class="timeline"
+          [min]="store.rangeStart()"
+          [max]="store.rangeEnd()"
+          step="1000"
+          aria-label="Session timeline"
+        >
+          <input matSliderThumb [value]="store.now()" (input)="onSeek($event)" />
+        </mat-slider>
+
+        @if (store.flagSegments().length) {
+          <app-flag-strip
+            [segments]="store.flagSegments()"
+            [rangeStart]="store.rangeStart()"
+            [rangeEnd]="store.rangeEnd()"
+            (seekTo)="store.seek($event)"
+          />
+        }
+      </div>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="picker speed">
+        <mat-label>Speed</mat-label>
+        <mat-select [value]="store.speed()" (selectionChange)="store.speed.set($event.value)">
+          @for (s of speeds; track s) {
+            <mat-option [value]="s">{{ s }}×</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  }
+
+  <div class="board" cdkDropListGroup>
+    @for (col of columns; track col) {
+      <div
+        class="column"
+        cdkDropList
+        [id]="col"
+        [cdkDropListData]="col"
+        (cdkDropListDropped)="layout.drop($event)"
+      >
+        @for (id of layout.layout()[col]; track id) {
+          <app-widget cdkDrag [cdkDragData]="id" [title]="titles[id]" (closed)="layout.hide(id)">
+            @switch (id) {
+              @case ('leaderboard') {
+                @if (store.loading()) {
+                  <div class="loading">
+                    <mat-spinner diameter="40" />
+                    <span>Loading session data…</span>
+                  </div>
+                } @else {
+                  <app-leaderboard
+                    [rows]="store.rows()"
+                    [selected]="cmp.selected()"
+                    (select)="cmp.toggle($event)"
+                  />
+                }
+              }
+              @case ('map') {
+                <app-track-map
+                  [outline]="store.outline()"
+                  [cars]="store.cars()"
+                  [paused]="store.mapPaused()"
+                />
+              }
+              @case ('telemetry') {
+                <app-telemetry-widget />
+              }
+              @case ('feed') {
+                <app-feed-widget />
+              }
+            }
+          </app-widget>
+        } @empty {
+          <div class="drop-hint">Drop a widget here</div>
+        }
+      </div>
+    }
+  </div>
+</section>
+
+<app-comparison-sheet />

@@ -1,0 +1,75 @@
+<mat-tab-group
+  animationDuration="0ms"
+  mat-stretch-tabs="false"
+  (selectedTabChange)="$event.index === 1 && store.enableRadio()"
+>
+  <mat-tab label="Race control">
+    <ul class="feed">
+      @for (m of store.messages(); track m.date + m.message) {
+        <li>
+          <span class="feed-time">{{ m.date | date: 'HH:mm:ss' }}</span>
+          <span class="flag" [attr.data-flag]="m.flag"></span>
+          <span class="feed-text">{{ m.message }}</span>
+        </li>
+      } @empty {
+        <li class="feed-empty">No messages yet.</li>
+      }
+    </ul>
+  </mat-tab>
+
+  <mat-tab label="Team radio">
+    <ul class="feed radio">
+      @for (r of store.radio(); track r.recording_url) {
+        <li class="clip" [class.active]="isActive(r.recording_url)">
+          <div class="clip-head">
+            <span class="radio-driver" [style.--c]="'#' + r.colour">{{ r.acronym }}</span>
+            <span class="feed-time">{{ r.date | date: 'HH:mm:ss' }}</span>
+            @if (isActive(r.recording_url)) {
+              <span class="clock">
+                {{ clock(player.position()) }}
+                @if (player.duration() > 0) {
+                  / {{ clock(player.duration()) }}
+                }
+              </span>
+            }
+          </div>
+
+          <div class="clip-player">
+            <button
+              type="button"
+              class="play"
+              (click)="player.toggle(r.recording_url)"
+              [attr.aria-label]="
+                isActive(r.recording_url) && player.playing() ? 'Pause radio' : 'Play radio'
+              "
+            >
+              @if (isActive(r.recording_url) && player.loading() && !player.failed()) {
+                <mat-spinner diameter="18" />
+              } @else if (player.failed() === r.recording_url) {
+                <mat-icon matTooltip="This recording is unavailable">error_outline</mat-icon>
+              } @else {
+                <mat-icon>{{
+                  isActive(r.recording_url) && player.playing() ? 'pause' : 'play_arrow'
+                }}</mat-icon>
+              }
+            </button>
+            <div
+              class="scrub"
+              [class.idle]="!isActive(r.recording_url)"
+              role="slider"
+              aria-label="Seek"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              [attr.aria-valuenow]="progress(r.recording_url)"
+              (click)="scrub($event, r.recording_url)"
+            >
+              <span class="fill" [style.width.%]="progress(r.recording_url)"></span>
+            </div>
+          </div>
+        </li>
+      } @empty {
+        <li class="feed-empty">No team radio. F1 doesn't publish it for most 2026 sessions.</li>
+      }
+    </ul>
+  </mat-tab>
+</mat-tab-group>
