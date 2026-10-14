@@ -6,6 +6,7 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { join } from 'node:path';
+import { createLiveRouter, createLiveServices } from './server/live-routes';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
@@ -13,16 +14,13 @@ const app = express();
 const angularApp = new AngularNodeAppEngine();
 
 /**
- * Example Express Rest API endpoints can be defined here.
- * Uncomment and define endpoints as necessary.
- *
- * Example:
- * ```ts
- * app.get('/api/{*splat}', (req, res) => {
- *   // Handle API request
- * });
- * ```
+ * Live data relay: one connection to OpenF1's real-time feed shared by all browsers. It is only
+ * active when OPENF1_USERNAME and OPENF1_PASSWORD are set (an OpenF1 sponsor account); otherwise
+ * these routes just report that live is not enabled.
  */
+const live = createLiveServices(process.env);
+app.use(createLiveRouter(live));
+process.on('exit', () => live?.relay.shutdown());
 
 /**
  * Serve static files from /browser
@@ -41,9 +39,7 @@ app.use(
 app.use((req, res, next) => {
   angularApp
     .handle(req)
-    .then((response) =>
-      response ? writeResponseToNodeResponse(response, res) : next(),
-    )
+    .then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
     .catch(next);
 });
 

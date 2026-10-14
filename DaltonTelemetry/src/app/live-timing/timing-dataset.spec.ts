@@ -291,6 +291,40 @@ describe('TimingDataset recent laps', () => {
   });
 });
 
+describe('TimingDataset live updates', () => {
+  it('merges a pit stop reported again with its duration instead of counting it twice', () => {
+    const ds = build();
+    ds.addPits([{ date: iso(60), driver_number: 1, lap_number: 1, pit_duration: null }]);
+    ds.addPits([{ date: iso(60), driver_number: 1, lap_number: 1, pit_duration: 20 }]);
+    const row = (s: number) => ds.rows(T0 + s * 1000).find((r) => r.acronym === 'AAA')!;
+    expect(row(70).pitStops).toBe(1);
+    expect(row(70).inPit).toBe(true);
+    expect(row(100).inPit).toBe(false); // 20 s pit lane + margin has passed
+  });
+
+  it('ignores race control messages and radio clips it already has', () => {
+    const ds = new TimingDataset();
+    const message = {
+      date: iso(10),
+      driver_number: null,
+      lap_number: 1,
+      category: 'Flag',
+      flag: 'GREEN',
+      scope: 'Track',
+      sector: null,
+      message: 'GREEN LIGHT - PIT EXIT OPEN',
+    };
+    ds.addRaceControl([message]);
+    ds.addRaceControl([message]);
+    expect(ds.raceControl.length).toBe(1);
+
+    const clip = { date: iso(5), driver_number: 1, recording_url: 'https://x/a.mp3' };
+    ds.addRadio([clip, clip]);
+    ds.addRadio([clip]);
+    expect(ds.radio.length).toBe(1);
+  });
+});
+
 describe('TimingDataset location', () => {
   const loc = (d: number, s: number, x: number, y: number, z = 1) => ({
     date: iso(s),

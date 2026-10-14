@@ -109,6 +109,9 @@ export class TimingDataset {
   private pits = new Map<number, TimedSeries<OF1Pit>>();
   private stints = new Map<number, OF1Stint[]>();
   private lapsByDriver = new Map<number, Map<number, OF1Lap>>();
+  private pitIndex = new Map<string, OF1Pit>();
+  private seenRaceControl = new Set<string>();
+  private seenRadio = new Set<string>();
   private lapTracks = new Map<number, LapRecord[]>();
   private lapsDirty = false;
 
@@ -150,12 +153,28 @@ export class TimingDataset {
     }
   }
 
+  /** A stop can be reported again once its duration is known, so rows merge by (driver, lap). */
   addPits(rows: OF1Pit[]): void {
-    for (const r of rows) this.series(this.pits, r.driver_number).add(toMs(r.date), r);
+    for (const r of rows) {
+      const key = `${r.driver_number}:${r.lap_number}`;
+      const existing = this.pitIndex.get(key);
+      if (existing) {
+        existing.pit_duration = r.pit_duration ?? existing.pit_duration;
+        continue;
+      }
+      const copy = { ...r };
+      this.pitIndex.set(key, copy);
+      this.series(this.pits, r.driver_number).add(toMs(r.date), copy);
+    }
   }
 
   addRaceControl(rows: OF1RaceControl[]): void {
-    for (const r of rows) this.raceControl.add(toMs(r.date), r);
+    for (const r of rows) {
+      const key = `${r.date}|${r.message}`;
+      if (this.seenRaceControl.has(key)) continue;
+      this.seenRaceControl.add(key);
+      this.raceControl.add(toMs(r.date), r);
+    }
   }
 
   addWeather(rows: OF1Weather[]): void {
@@ -163,7 +182,11 @@ export class TimingDataset {
   }
 
   addRadio(rows: OF1TeamRadio[]): void {
-    for (const r of rows) this.radio.add(toMs(r.date), r);
+    for (const r of rows) {
+      if (this.seenRadio.has(r.recording_url)) continue;
+      this.seenRadio.add(r.recording_url);
+      this.radio.add(toMs(r.date), r);
+    }
   }
 
   setStints(rows: OF1Stint[]): void {

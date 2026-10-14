@@ -1,7 +1,9 @@
-import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
 import { forkJoin, of, Subscription } from 'rxjs';
 import { OpenF1Service } from '../core/openf1/openf1.service';
-import { OF1Session } from '../core/openf1/openf1.model';
+import { LiveEvent, LiveFeedService } from '../core/openf1/live-feed.service';
+import { OF1Session, OF1Stint } from '../core/openf1/openf1.model';
+import { applyLiveBatch, stintKey } from './live-ingest';
 import { LapSummary, Point, TimingDataset } from './timing-dataset';
 
 const TICK_MS = 250;
@@ -24,6 +26,19 @@ export const MAX_MAP_SPEED = 10;
 /** While following live, the map trails the clock by one fast poll so cars move smoothly. */
 const LIVE_MAP_LAG_MS = FAST_POLL_MS;
 
+/** Everything the page needs live except `car_data`, which only the telemetry widget wants. */
+const STREAM_TOPICS = [
+  'v1/position',
+  'v1/intervals',
+  'v1/laps',
+  'v1/stints',
+  'v1/pit',
+  'v1/race_control',
+  'v1/weather',
+  'v1/team_radio',
+  'v1/location',
+];
+
 export const PLAYBACK_SPEEDS = [1, 2, 5, 10, 30, 60] as const;
 
 type Cursor = 'positions' | 'intervals' | 'raceControl' | 'weather' | 'radio' | 'pits' | 'location';
@@ -42,6 +57,7 @@ const lastDate = (rows: { date: string }[], fallback?: string): string | undefin
 @Injectable()
 export class LiveTimingStore {
   private api = inject(OpenF1Service);
+  private feed = inject(LiveFeedService);
   private destroyRef = inject(DestroyRef);
 
   private dataset = new TimingDataset();
@@ -58,6 +74,9 @@ export class LiveTimingStore {
   private generation = 0;
   private cursors: Partial<Record<Cursor, string>> = {};
   private radioEnabled = false;
+  private relayAvailable = false;
+  /** Stint documents by (driver, stint), so streamed updates can rebuild the full list. */
+  private stintDocs = new Map<string, OF1Stint>();
 
   private loadedWindows = new Set<number>();
   private loadingWindows = new Set<number>();
@@ -78,6 +97,8 @@ export class LiveTimingStore {
   readonly sessionLive = signal(false);
   /** The clock follows wall time; false once the user seeks into the past. */
   readonly following = signal(false);
+  /** Live data arrives through the server relay (a stream) instead of by polling. */
+  readonly relayActive = signal(false);
   readonly playing = signal(false);
   readonly speed = signal<number>(1);
   readonly now = signal(0);
@@ -136,6 +157,22 @@ export class LiveTimingStore {
     return this.dataset.recentLaps(driver, this.now(), count);
   }
 
+  constructor() {
+    // Surface the relay's own connection problems the way polling errors are shown.
+    effect(() => {
+      if (!this.relayActive()) return;
+      const state = this.feed.state();
+      const error = this.feed.error();
+      this.liveError.set(
+        state === 'error'
+          ? `Live feed unavailable${error ? `: ${error}` : ''}`
+          : state === 'connecting'
+            ? 'Connecting to the live feed…'
+            : null,
+      );
+    });
+  }
+
   start(): void {
     const timer = setInterval(() => this.tick(), TICK_MS);
     const frame = () => {
@@ -150,7 +187,11 @@ export class LiveTimingStore {
       cancelAnimationFrame(raf);
       this.cancelWork();
     });
-    this.loadYear(this.year());
+    // Learn whether the server offers a live relay before the first session is chosen.
+    void this.feed.isAvailable().then((available) => {
+      this.relayAvailable = available;
+      this.loadYear(this.year());
+    });
   }
 
   loadYear(year: number): void {
@@ -203,6 +244,10 @@ export class LiveTimingStore {
       t <= Date.parse(session.date_end) + LIVE_WINDOW_AFTER_MS;
     // Finished sessions never change, so they can be served from the browser cache.
     const cache = !live;
+    // A live session's REST data needs the server's token, and updates arrive by stream.
+    const relay = live && this.relayAvailable;
+    this.api.useRelay(relay);
+    this.relayActive.set(relay);
 
     this.loadSub = forkJoin({
       drivers: this.api.getDrivers(key, cache),
@@ -221,6 +266,9 @@ export class LiveTimingStore {
         ds.addIntervals(d.intervals);
         ds.mergeLaps(d.laps);
         ds.setStints(d.stints);
+        this.stintDocs = new Map(
+          d.stints.map((st) => [`${st.driver_number}:${st.stint_number}`, st]),
+        );
         ds.addPits(d.pits);
         ds.addRaceControl(d.raceControl);
         ds.addWeather(d.weather);
@@ -239,7 +287,8 @@ export class LiveTimingStore {
         this.loading.set(false);
         this.version.update((v) => v + 1);
         this.loadOutline(generation, cache);
-        if (live) this.startPolling(key, generation);
+        if (relay) this.startStream(key, generation);
+        else if (live) this.startPolling(key, generation);
       },
       error: (err) => {
         this.loading.set(false);
@@ -503,6 +552,29 @@ export class LiveTimingStore {
     fast();
     // Offset the slow loop so both groups don't hit the limiter in the same instant.
     schedule(slow, SLOW_POLL_MS);
+  }
+
+  /* ── Live stream (server relay) ─────────────────── */
+
+  private startStream(key: number, generation: number): void {
+    const sub = this.feed.stream(STREAM_TOPICS).subscribe((batch) => {
+      if (generation === this.generation && this.sessionLive()) this.ingest(batch, key);
+    });
+    this.pollSubs.add(sub);
+  }
+
+  /** Applies one batch of streamed rows to the dataset. */
+  private ingest(batch: LiveEvent[], sessionKey: number): void {
+    const { changed, lapsChanged } = applyLiveBatch(
+      this.dataset,
+      this.stintDocs,
+      batch,
+      sessionKey,
+    );
+    if (!changed) return;
+    this.version.update((v) => v + 1);
+    // The circuit outline needs one completed lap; try again as laps arrive.
+    if (lapsChanged) this.loadOutline(this.generation, false);
   }
 
   private stopPolling(): void {

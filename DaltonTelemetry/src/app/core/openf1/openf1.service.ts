@@ -18,8 +18,11 @@ import {
   OF1Weather,
 } from './openf1.model';
 import { Params, toQuery } from './openf1.query';
+import { RateWindow } from './rate-window';
 
 const BASE_URL = 'https://api.openf1.org/v1';
+/** The server's authenticated proxy (see src/server), used while a session is live. */
+const RELAY_URL = '/api/openf1';
 
 /**
  * The free OpenF1 tier allows 3 requests/second and 30 requests/minute. We stay below both
@@ -38,9 +41,22 @@ export class OpenF1Service {
   private http = inject(HttpClient);
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  /** Scheduled request times (ms), kept in localStorage so reloads and other tabs share the budget. */
-  private slots: number[] = this.loadSlots();
+  /** Request budget, persisted in localStorage so reloads and other tabs share it. */
+  private readonly window = new RateWindow(
+    { minGapMs: MIN_GAP_MS, maxPerWindow: MAX_PER_MINUTE, windowMs: WINDOW_MS },
+    this.loadSlots(),
+  );
   private cooldownUntil = 0;
+  private viaRelay = false;
+
+  /**
+   * Route requests through the server's authenticated proxy instead of calling OpenF1 directly.
+   * Used for live sessions, whose REST data needs a token the browser doesn't have. The server
+   * paces its own requests, so the browser-side limiter is skipped.
+   */
+  useRelay(enabled: boolean): void {
+    this.viaRelay = enabled;
+  }
 
   getSessions(year: number): Observable<OF1Session[]> {
     return this.get<OF1Session>('sessions', { year });
@@ -131,9 +147,10 @@ export class OpenF1Service {
   }
 
   private get<T>(endpoint: string, params: Params, cache = false): Observable<T[]> {
-    const url = `${BASE_URL}/${endpoint}?${toQuery(params)}`;
+    const relay = this.viaRelay;
+    const url = `${relay ? RELAY_URL : BASE_URL}/${endpoint}?${toQuery(params)}`;
 
-    const network$ = defer(() => timer(this.reserveSlot())).pipe(
+    const network$ = defer(() => timer(relay ? 0 : this.reserveSlot())).pipe(
       switchMap(() => this.http.get<T[]>(url)),
       retry({
         count: 2,
@@ -161,17 +178,7 @@ export class OpenF1Service {
   /** Time to wait (ms) before a request may be sent without breaching either rate limit. */
   private reserveSlot(): number {
     const now = Date.now();
-    this.slots = this.slots.filter((s) => s > now - WINDOW_MS);
-
-    let at = Math.max(
-      now,
-      this.cooldownUntil,
-      (this.slots[this.slots.length - 1] ?? 0) + MIN_GAP_MS,
-    );
-    if (this.slots.length >= MAX_PER_MINUTE) {
-      at = Math.max(at, this.slots[this.slots.length - MAX_PER_MINUTE] + WINDOW_MS);
-    }
-    this.slots.push(at);
+    const at = this.window.reserve(now, this.cooldownUntil);
     this.saveSlots();
     return at - now;
   }
@@ -189,7 +196,7 @@ export class OpenF1Service {
   private saveSlots(): void {
     if (!this.isBrowser) return;
     try {
-      localStorage.setItem(SLOTS_STORAGE_KEY, JSON.stringify(this.slots));
+      localStorage.setItem(SLOTS_STORAGE_KEY, JSON.stringify(this.window.scheduled));
     } catch {
       // storage unavailable: the in-memory limiter still applies
     }

@@ -1,4 +1,5 @@
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { LiveFeedService } from '../../core/openf1/live-feed.service';
 import { OpenF1Service } from '../../core/openf1/openf1.service';
 import { OF1CarData } from '../../core/openf1/openf1.model';
 import { ComparisonStore } from '../comparison/comparison.store';
@@ -51,6 +52,7 @@ export class TelemetryFeedStore {
   private readonly timing = inject(LiveTimingStore);
   private readonly cmp = inject(ComparisonStore);
   private readonly api = inject(OpenF1Service);
+  private readonly feed = inject(LiveFeedService);
 
   private readonly series = new Map<number, TimedSeries<CarSample>>();
   private readonly version = signal(0);
@@ -95,10 +97,31 @@ export class TelemetryFeedStore {
       });
     });
 
-    // Live: poll for new samples while following.
+    // Live through the server relay: telemetry arrives as a stream, kept only for selected drivers.
+    effect((onCleanup) => {
+      const session = this.timing.session();
+      const watching = this.cmp.selected().length > 0;
+      if (!session || !watching || !this.timing.relayActive() || !this.timing.sessionLive()) return;
+
+      const subscription = this.feed.stream(['v1/car_data']).subscribe((batch) => {
+        const selected = untracked(() => this.cmp.selected());
+        const rows = batch
+          .map((e) => e.data as unknown as OF1CarData)
+          .filter(
+            (r) =>
+              (r as unknown as { session_key: number }).session_key === session.session_key &&
+              selected.includes(r.driver_number),
+          );
+        if (rows.length) this.ingest(rows);
+      });
+      onCleanup(() => subscription.unsubscribe());
+    });
+
+    // Live without a relay: poll for new samples while following.
     effect((onCleanup) => {
       const session = this.timing.session();
       const drivers = this.cmp.selected();
+      if (this.timing.relayActive()) return;
       if (!session || !drivers.length || !(this.timing.sessionLive() && this.timing.following())) {
         return;
       }
