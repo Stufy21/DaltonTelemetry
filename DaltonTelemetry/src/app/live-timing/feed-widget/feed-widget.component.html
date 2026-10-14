@@ -22,7 +22,24 @@
       @for (r of store.radio(); track r.recording_url) {
         <li class="clip" [class.active]="isActive(r.recording_url)">
           <div class="clip-head">
-            <span class="radio-driver" [style.--c]="'#' + r.colour">{{ r.acronym }}</span>
+            <span class="avatar" [style.--c]="'#' + r.colour">
+              @if (r.headshot && !brokenPhotos().has(r.headshot)) {
+                <img
+                  [src]="r.headshot"
+                  [alt]="r.name ?? r.acronym"
+                  loading="lazy"
+                  (error)="photoFailed(r.headshot)"
+                />
+              } @else {
+                <span class="avatar-fallback" aria-hidden="true">{{ r.acronym }}</span>
+              }
+            </span>
+            <span class="radio-driver">
+              <span class="radio-acronym">{{ r.acronym }}</span>
+              @if (r.name) {
+                <span class="radio-name">{{ r.name }}</span>
+              }
+            </span>
             <span class="feed-time">{{ r.date | date: 'HH:mm:ss' }}</span>
             @if (isActive(r.recording_url)) {
               <span class="clock">

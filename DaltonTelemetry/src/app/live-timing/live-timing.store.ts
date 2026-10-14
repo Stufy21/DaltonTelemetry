@@ -140,6 +140,8 @@ export class LiveTimingStore {
     (this.version(), this.dataset.radio.latest(this.now(), 40)).map((r) => ({
       ...r,
       acronym: this.dataset.drivers.get(r.driver_number)?.name_acronym ?? `#${r.driver_number}`,
+      name: this.dataset.drivers.get(r.driver_number)?.full_name ?? null,
+      headshot: this.dataset.drivers.get(r.driver_number)?.headshot_url ?? null,
       colour: this.dataset.drivers.get(r.driver_number)?.team_colour ?? '888888',
     })),
   );
