@@ -5,6 +5,10 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "daltontelemetry",
   "compatibility_date": "2026-10-14",
+  // `wrangler deploy` builds the site first, so a Git-connected deploy needs no separate build command.
+  "build": {
+    "command": "npm run build:cloudflare"
+  },
   "assets": {
     "directory": "./dist/DaltonTelemetry/browser",
     // Routes with no file of their own (/live-timing, /reports/stats/:id) get the app shell.
