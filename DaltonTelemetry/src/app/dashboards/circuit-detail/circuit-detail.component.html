@@ -1,0 +1,171 @@
+<section class="detail">
+  <a class="back" routerLink="/reports/stats"><mat-icon>arrow_back</mat-icon>All circuits</a>
+
+  @switch (state().status) {
+    @case ('loading') {
+      <div class="state">
+        <mat-spinner diameter="40" />
+        <span>Loading circuit history…</span>
+      </div>
+    }
+    @case ('error') {
+      <div class="state">Could not load the history of this circuit. Try again in a moment.</div>
+    }
+    @default {
+      @if (ready(); as r) {
+        <header class="hero">
+          <div>
+            <h2>{{ r.circuit?.circuitName ?? 'Circuit' }}</h2>
+            @if (r.circuit) {
+              <p>{{ r.circuit.Location.locality }}, {{ r.circuit.Location.country }}</p>
+            }
+          </div>
+          @if (r.stats.races) {
+            <div class="chips">
+              <span class="chip">
+                {{ r.stats.races }} {{ r.stats.races === 1 ? 'Grand Prix' : 'Grands Prix' }}
+              </span>
+              <span class="chip">{{ r.stats.firstSeason }}–{{ r.stats.lastSeason }}</span>
+            </div>
+          }
+        </header>
+
+        @if (!r.stats.races) {
+          <div class="state">No Grand Prix has been held at this circuit yet.</div>
+        } @else {
+          <div class="cards">
+            <!-- lap record -->
+            <article class="card record">
+              <h3>Lap record</h3>
+              @if (r.stats.lapRecord; as rec) {
+                <p class="big">{{ rec.time }}</p>
+                <p class="sub">{{ rec.driver }} · {{ rec.constructor }} · {{ rec.season }}</p>
+                @if (rec.speedKph) {
+                  <p class="sub">Average {{ rec.speedKph | number: '1.0-1' }} km/h</p>
+                }
+                <p class="note">Fastest race lap on record. Layouts change over the years.</p>
+              } @else {
+                <p class="sub">No fastest lap data for this circuit.</p>
+              }
+            </article>
+
+            <!-- pole to win -->
+            <article class="card">
+              <h3>Pole to win</h3>
+              @if (r.stats.poleToWin.of) {
+                <p class="big">{{ percent(r.stats.poleToWin.won, r.stats.poleToWin.of) }}%</p>
+                <p class="sub">
+                  {{ r.stats.poleToWin.won }} of {{ r.stats.poleToWin.of }}
+                  {{ r.stats.poleToWin.of === 1 ? 'race was' : 'races were' }} won from pole
+                </p>
+                <div class="meter" aria-hidden="true">
+                  <span
+                    [style.width.%]="percent(r.stats.poleToWin.won, r.stats.poleToWin.of)"
+                  ></span>
+                </div>
+                <p class="note">
+                  Since {{ poleSince(r.stats.poleSitters) }}, when qualifying data starts.
+                </p>
+              } @else {
+                <p class="sub">No qualifying data.</p>
+              }
+            </article>
+
+            <!-- rankings -->
+            <article class="card">
+              <h3>Most wins · drivers</h3>
+              <ol class="ranking">
+                @for (e of top(r.stats.winningDrivers); track e.id) {
+                  <li [matTooltip]="years(e)">
+                    <span class="name">{{ e.name }}</span>
+                    <span class="bar"
+                      ><span [style.width.%]="share(e, r.stats.winningDrivers)"></span
+                    ></span>
+                    <span class="count">{{ e.count }}</span>
+                  </li>
+                }
+              </ol>
+            </article>
+
+            <article class="card">
+              <h3>Most wins · constructors</h3>
+              <ol class="ranking">
+                @for (e of top(r.stats.winningConstructors); track e.id) {
+                  <li [matTooltip]="years(e)">
+                    <span class="name">{{ e.name }}</span>
+                    <span class="bar">
+                      <span [style.width.%]="share(e, r.stats.winningConstructors)"></span>
+                    </span>
+                    <span class="count">{{ e.count }}</span>
+                  </li>
+                }
+              </ol>
+            </article>
+
+            <article class="card">
+              <h3>Most poles</h3>
+              @if (r.stats.poleSitters.length) {
+                <ol class="ranking">
+                  @for (e of top(r.stats.poleSitters); track e.id) {
+                    <li [matTooltip]="years(e)">
+                      <span class="name">{{ e.name }}</span>
+                      <span class="bar"
+                        ><span [style.width.%]="share(e, r.stats.poleSitters)"></span
+                      ></span>
+                      <span class="count">{{ e.count }}</span>
+                    </li>
+                  }
+                </ol>
+                <p class="note">
+                  Since {{ poleSince(r.stats.poleSitters) }}, when qualifying data starts.
+                </p>
+              } @else {
+                <p class="sub">No qualifying data.</p>
+              }
+            </article>
+          </div>
+
+          <article class="card editions">
+            <h3>Every Grand Prix</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th>Winner</th>
+                    <th>Constructor</th>
+                    <th>Pole</th>
+                    <th>Fastest lap</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (e of r.stats.editions; track e.season) {
+                    <tr>
+                      <td class="year">{{ e.season }}</td>
+                      <td class="strong">{{ e.winner?.name }}</td>
+                      <td>{{ e.constructor }}</td>
+                      <td>
+                        {{ e.pole?.name ?? '–' }}
+                        @if (e.poleWon) {
+                          <span class="tag" matTooltip="Won from pole">P→W</span>
+                        }
+                      </td>
+                      <td [class.record-lap]="r.stats.lapRecord?.season === e.season">
+                        @if (e.fastestLap; as f) {
+                          {{ f.time }}
+                          <span class="driver">{{ f.driver }}</span>
+                        } @else {
+                          –
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </article>
+        }
+      }
+    }
+  }
+</section>

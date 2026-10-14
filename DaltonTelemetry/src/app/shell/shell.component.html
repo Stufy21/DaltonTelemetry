@@ -1,15 +1,24 @@
-<mat-sidenav-container class="shell-container">
+<mat-sidenav-container class="shell">
+  <mat-sidenav
+    class="sidenav"
+    [mode]="mobile() ? 'over' : 'side'"
+    [opened]="sidenavOpen()"
+    (closedStart)="sidenavOpen.set(false)"
+  >
+    <a class="brand" routerLink="/" aria-label="DaltonTV Telemetry home">
+      <img
+        class="brand-mark"
+        src="dalton-tv-wordmark.png"
+        alt="DaltonTV"
+        width="880"
+        height="170"
+      />
+      <span class="brand-product">Telemetry</span>
+    </a>
 
-  <mat-sidenav [opened]="sidenavOpen()" mode="side" class="shell-sidenav">
-    <div class="sidenav-brand">
-      <!-- <mat-icon class="brand-icon">satellite_alt</mat-icon> -->
-      <span class="brand-name">DaltonTelemetry</span> 
-    </div>
-
-    <mat-divider />
+    <p class="nav-heading">Menu</p>
 
     <mat-tree [dataSource]="navTree" [childrenAccessor]="childrenAccessor" class="nav-tree">
-
       <!-- Group nodes (has children) -->
       <mat-tree-node
         *matTreeNodeDef="let node; when: hasChild"
@@ -27,24 +36,17 @@
 
       <!-- Leaf nodes -->
       <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
-        <a
-          [routerLink]="node.route"
-          routerLinkActive="nav-active"
-          class="nav-item"
-          [matTooltip]="node.label"
-          matTooltipPosition="right"
-          [matTooltipDisabled]="sidenavOpen()"
-        >
+        <a [routerLink]="node.route" routerLinkActive="nav-active" class="nav-item">
           <mat-icon class="nav-icon">{{ node.icon }}</mat-icon>
           <span class="nav-label">{{ node.label }}</span>
         </a>
       </mat-tree-node>
-
     </mat-tree>
+
+    <p class="sidenav-footer">Data from OpenF1 &amp; Jolpica</p>
   </mat-sidenav>
 
   <mat-sidenav-content class="shell-content">
-
     <mat-toolbar class="shell-toolbar">
       <button
         mat-icon-button
@@ -54,14 +56,36 @@
       >
         <mat-icon>menu</mat-icon>
       </button>
-      <span class="toolbar-title"></span>
+
+      @if (mobile()) {
+        <img class="toolbar-logo" src="dalton-tv-icon.png" alt="" width="28" height="28" />
+      }
+      <h1 class="toolbar-title">{{ pageTitle() }}</h1>
       <span class="toolbar-spacer"></span>
-      <button mat-icon-button aria-label="Notifications" matTooltip="Notifications">
-        <mat-icon>notifications_none</mat-icon>
+
+      <button
+        mat-icon-button
+        [matMenuTriggerFor]="themeMenu"
+        aria-label="Change theme"
+        matTooltip="Theme"
+      >
+        <mat-icon>{{ themeIcon() }}</mat-icon>
       </button>
-      <button mat-icon-button aria-label="Account" matTooltip="Account">
-        <mat-icon>account_circle</mat-icon>
-      </button>
+      <mat-menu #themeMenu="matMenu" xPosition="before">
+        @for (option of themeOptions; track option.mode) {
+          <button
+            mat-menu-item
+            (click)="theme.set(option.mode)"
+            [class.theme-selected]="theme.mode() === option.mode"
+          >
+            <mat-icon>{{ option.icon }}</mat-icon>
+            <span>{{ option.label }}</span>
+            @if (theme.mode() === option.mode) {
+              <mat-icon class="theme-check">check</mat-icon>
+            }
+          </button>
+        }
+      </mat-menu>
     </mat-toolbar>
 
     <main class="shell-main">
@@ -69,9 +93,7 @@
     </main>
 
     <footer class="shell-footer">
-      <span>© 2026 DaltonTelemetry. All rights reserved.</span>
+      <span>© 2026 DaltonTelemetry</span>
     </footer>
-
   </mat-sidenav-content>
-
 </mat-sidenav-container>

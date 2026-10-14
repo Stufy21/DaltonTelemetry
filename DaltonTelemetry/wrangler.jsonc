@@ -1,0 +1,13 @@
+// Cloudflare Workers configuration: the app is deployed as static assets (no Worker script).
+// Build with `npm run build:cloudflare`, preview with `npm run preview:cloudflare`,
+// publish with `npm run deploy:cloudflare`. See the README for the first-time setup.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dalton-telemetry",
+  "compatibility_date": "2026-10-14",
+  "assets": {
+    "directory": "./dist/DaltonTelemetry/browser",
+    // Routes with no file of their own (/live-timing, /reports/stats/:id) get the app shell.
+    "not_found_handling": "single-page-application"
+  }
+}

@@ -1,0 +1,40 @@
+@if (cards().length) {
+  <div class="chips">
+    @for (c of cards(); track c.driver; let i = $index) {
+      <span class="chip" [style.--c]="c.colour">
+        {{ c.name }}
+        <button type="button" (click)="cmp.toggle(c.driver)" [attr.aria-label]="'Remove ' + c.name">
+          <mat-icon>close</mat-icon>
+        </button>
+      </span>
+      @if (i === 0 && cards().length > 1) {
+        <span class="vs">vs</span>
+      }
+    }
+  </div>
+
+  <div class="dials" [class.single]="cards().length === 1">
+    @for (c of cards(); track c.driver) {
+      <div class="dial">
+        <h3 [style.color]="c.colour">{{ c.name }}</h3>
+        <app-gauge
+          [name]="c.name"
+          [colour]="c.colour"
+          [speed]="c.sample?.speed ?? null"
+          [rpm]="c.sample?.rpm ?? null"
+          [gear]="c.sample?.gear ?? null"
+          [throttle]="c.sample?.throttle ?? null"
+          [brake]="c.sample?.brake ?? null"
+        />
+      </div>
+    }
+  </div>
+
+  @if (paused()) {
+    <p class="note">Dials are paused above 10× to stay within the API limits.</p>
+  }
+} @else {
+  <p class="empty">
+    Click two drivers in the leaderboard to see their live telemetry side by side.
+  </p>
+}

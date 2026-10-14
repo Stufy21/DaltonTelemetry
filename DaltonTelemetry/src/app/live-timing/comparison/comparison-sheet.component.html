@@ -1,0 +1,154 @@
+@if (cmp.selected().length) {
+  <section class="sheet" role="region" aria-label="Driver comparison">
+    <header class="sheet-head">
+      <div class="drivers">
+        @for (d of drivers(); track d.driverNumber; let i = $index) {
+          <div class="chip">
+            <span class="slot">{{ i === 0 ? 'A' : 'B' }}</span>
+            <span class="bar" [style.background]="d.teamColour"></span>
+            <strong>{{ d.acronym }}</strong>
+            <span class="muted">
+              P{{ d.position ?? '–' }} · {{ compoundLetter(d.compound) }}{{ d.tyreAge ?? '' }}
+            </span>
+          </div>
+          @if (i === 0 && drivers().length > 1) {
+            <span class="vs">vs</span>
+          }
+        }
+        @if (drivers().length < 2) {
+          <span class="hint">Select a second driver in the leaderboard to compare.</span>
+        }
+      </div>
+
+      <div class="actions">
+        @if (drivers().length > 1) {
+          <button mat-icon-button (click)="cmp.swap()" matTooltip="Swap A and B" aria-label="Swap">
+            <mat-icon>swap_horiz</mat-icon>
+          </button>
+        }
+        <button
+          mat-icon-button
+          (click)="cmp.toggleCollapsed()"
+          [matTooltip]="cmp.collapsed() ? 'Expand' : 'Collapse'"
+          [attr.aria-label]="cmp.collapsed() ? 'Expand comparison' : 'Collapse comparison'"
+          [attr.aria-expanded]="!cmp.collapsed()"
+        >
+          <mat-icon>{{ cmp.collapsed() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+        <button
+          mat-icon-button
+          (click)="cmp.clear()"
+          matTooltip="Close comparison"
+          aria-label="Close comparison"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </header>
+
+    @if (!cmp.collapsed()) {
+      <div class="sheet-body">
+        <div class="laps">
+          <h3>Last 5 laps</h3>
+          @if (cmp.lapRows().length) {
+            <table>
+              <thead>
+                <tr>
+                  <th>Lap</th>
+                  @for (d of drivers(); track d.driverNumber) {
+                    <th>{{ d.acronym }}</th>
+                  }
+                  @if (drivers().length > 1) {
+                    <th matTooltip="Time of B minus time of A">Δ B–A</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of cmp.lapRows(); track row.lap) {
+                  <tr
+                    [class.active]="row.lap === cmp.activeLap()"
+                    (click)="cmp.chooseLap(row.lap)"
+                    (keydown.enter)="cmp.chooseLap(row.lap)"
+                    tabindex="0"
+                    matTooltip="Show telemetry for this lap"
+                  >
+                    <td class="lap-no">{{ row.lap }}</td>
+                    @for (t of row.times; track $index) {
+                      <td [class.best]="fastest(row) === $index">
+                        {{ lapTime(t.duration) }}
+                        @if (t.pitOut) {
+                          <span class="tag" matTooltip="Out lap">OUT</span>
+                        }
+                      </td>
+                    }
+                    @if (drivers().length > 1) {
+                      <td class="delta">
+                        @if (delta(row); as d) {
+                          <span [class.faster]="d < 0" [class.slower]="d > 0">{{
+                            formatDelta(d)
+                          }}</span>
+                        } @else {
+                          –
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (cmp.chosenLap() !== null) {
+              <button class="follow" (click)="cmp.followLatest()">
+                <mat-icon>update</mat-icon>Follow latest lap
+              </button>
+            }
+          } @else {
+            <p class="empty">No completed laps yet at this point of the session.</p>
+          }
+        </div>
+
+        <div class="telemetry">
+          <div class="telemetry-head">
+            <h3>
+              Telemetry
+              @if (cmp.tracedLap(); as lap) {
+                <span class="muted">· lap {{ lap }}</span>
+              }
+            </h3>
+            @if (cmp.loading()) {
+              <mat-spinner diameter="16" />
+            }
+            @if (hoverMetres(); as m) {
+              <span class="muted dist">{{ m }} m into the lap</span>
+            }
+          </div>
+
+          @if (cmp.error() && !hasTrace()) {
+            <p class="empty">{{ cmp.error() }}</p>
+          } @else if (hasTrace()) {
+            <div class="charts">
+              @for (m of metrics; track m.key) {
+                <app-telemetry-chart
+                  [class.wide]="m.wide"
+                  [title]="m.title"
+                  [unit]="m.unit"
+                  [series]="series()[m.key]"
+                  [step]="m.step ?? false"
+                  [min]="m.min ?? 0"
+                  [max]="m.max ?? null"
+                  [niceStep]="m.niceStep ?? 1"
+                  [hover]="cmp.hover()"
+                  (hoverChange)="cmp.hover.set($event)"
+                />
+              }
+            </div>
+            <p class="note">
+              Lap position is estimated by integrating speed. ERS/boost is not provided by OpenF1.
+            </p>
+          } @else if (!cmp.loading()) {
+            <p class="empty">Telemetry appears once the drivers have a completed lap.</p>
+          }
+        </div>
+      </div>
+    }
+  </section>
+}

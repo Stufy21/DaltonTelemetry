@@ -1,0 +1,50 @@
+:host {
+  display: block;
+}
+
+.widget {
+  overflow: hidden;
+  background: var(--dt-card);
+  border: 1px solid var(--dt-border);
+  border-radius: var(--dt-radius);
+  box-shadow: var(--dt-shadow);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 8px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--dt-border);
+}
+
+.grip {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--mat-sys-on-surface-variant);
+  cursor: grab;
+
+  &:hover {
+    background: var(--dt-subtle);
+    color: var(--mat-sys-on-surface);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+h2 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.spacer {
+  flex: 1;
+}

@@ -1,0 +1,101 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+}
+
+.title {
+  font-weight: 600;
+}
+
+.unit {
+  margin-left: 4px;
+  font-weight: 400;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.readouts {
+  display: flex;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--mat-sys-on-surface-variant);
+
+  b {
+    margin-left: 2px;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.readout {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.key {
+  width: 12px;
+  border-top: 3px solid var(--c);
+
+  &.dashed {
+    border-top-style: dashed;
+  }
+}
+
+.plot {
+  position: relative;
+  height: 84px;
+  border-radius: 8px;
+  background: var(--dt-subtle);
+  cursor: crosshair;
+  touch-action: pan-y;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+}
+
+.grid {
+  stroke: var(--dt-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+
+  &.dashed {
+    stroke-dasharray: 6 4;
+  }
+}
+
+.scale {
+  position: absolute;
+  right: 6px;
+  top: 3px;
+  font-size: 0.625rem;
+  color: var(--mat-sys-on-surface-variant);
+  pointer-events: none;
+}
+
+.cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--mat-sys-on-surface-variant);
+  pointer-events: none;
+}

@@ -1,0 +1,45 @@
+<section class="stats-page">
+  <header class="page-header">
+    <div>
+      <h2>2026 Circuits</h2>
+      <p>The season calendar in race order.</p>
+    </div>
+    @if (!loading() && circuits().length) {
+      <span class="count">{{ circuits().length }} circuits</span>
+    }
+  </header>
+
+  @if (loading()) {
+    <div class="state">
+      <mat-spinner diameter="40" />
+      <span>Loading circuits…</span>
+    </div>
+  } @else if (!circuits().length) {
+    <div class="state">Could not load the circuits. Try again in a moment.</div>
+  } @else {
+    <div class="circuit-grid">
+      @for (circuit of circuits(); track circuit.circuitId; let i = $index) {
+        <a class="circuit-card" [routerLink]="['/reports/stats', circuit.circuitId]">
+          <span class="round">{{ i + 1 }}</span>
+          <div class="map">
+            @if (brokenImages().has(circuit.circuitId)) {
+              <mat-icon class="fallback" aria-hidden="true">route</mat-icon>
+            } @else {
+              <img
+                class="invert-on-dark"
+                [src]="circuit.photoUrl"
+                [alt]="circuit.circuitName + ' layout'"
+                loading="lazy"
+                (error)="markImageBroken(circuit.circuitId)"
+              />
+            }
+          </div>
+          <div class="meta">
+            <h3>{{ circuit.circuitName }}</h3>
+            <p>{{ circuit.Location.locality }}, {{ circuit.Location.country }}</p>
+          </div>
+        </a>
+      }
+    </div>
+  }
+</section>

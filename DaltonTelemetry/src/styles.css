@@ -1,1 +1,94 @@
-/* You can add global styles to this file, and also import other style files */
+/*
+ * Design tokens shared by every page. Colors that must differ between themes use light-dark(),
+ * which follows the color-scheme set on <html> (see material-theme.scss / ThemeService).
+ */
+:root {
+  /* DaltonTV brand, sampled from the official logos */
+  --dt-orange: #f7801a;
+  --dt-brand-blue: #0173b1;
+  --dt-brand-navy: #003263;
+  /* semantic red: live and red flags */
+  --dt-red: #e10600;
+
+  --dt-radius: 16px;
+  --dt-radius-sm: 10px;
+
+  /* Surfaces: cards sit one step above the page background in both themes. */
+  --dt-card: light-dark(#ffffff, var(--mat-sys-surface-container-low));
+  --dt-card-raised: light-dark(#ffffff, var(--mat-sys-surface-container));
+  --dt-border: light-dark(rgb(23 28 32 / 0.1), rgb(255 255 255 / 0.08));
+  --dt-subtle: light-dark(rgb(23 28 32 / 0.04), rgb(255 255 255 / 0.04));
+  --dt-shadow: light-dark(0 1px 2px rgb(16 24 40 / 0.05), 0 1px 2px rgb(0 0 0 / 0.35));
+  --dt-shadow-lg: light-dark(
+    0 12px 32px -8px rgb(16 24 40 / 0.18),
+    0 16px 40px -12px rgb(0 0 0 / 0.6)
+  );
+
+  /* Timing semantics, tuned for contrast on both backgrounds. */
+  --dt-purple: light-dark(#7c3aed, #c77dff);
+  --dt-green: light-dark(#15803d, #30d158);
+  --dt-yellow: light-dark(#a16207, #ffd60a);
+  --dt-tyre-soft: #ef3340;
+  --dt-tyre-medium: light-dark(#d4a017, #ffd60a);
+  --dt-tyre-hard: light-dark(#4b5563, #f5f5f5);
+  --dt-tyre-inter: light-dark(#16a34a, #30d158);
+  --dt-tyre-wet: light-dark(#2563eb, #0a84ff);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Black line art (e.g. circuit layouts) that must turn white on dark backgrounds. */
+html[data-theme='dark'] .invert-on-dark {
+  filter: invert(1) brightness(1.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme='light']) .invert-on-dark {
+    filter: invert(1) brightness(1.1);
+  }
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--mat-sys-primary) 30%, transparent);
+}
+
+/* Slim, theme-aware scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--mat-sys-outline) 55%, transparent) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Drag and drop of dashboard widgets (CDK). */
+.cdk-drag-preview {
+  box-shadow: var(--dt-shadow-lg);
+  border-radius: var(--dt-radius);
+  opacity: 0.96;
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.25;
+}
+
+.cdk-drag-animating,
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}

@@ -1,0 +1,34 @@
+<div class="head">
+  <span class="title"
+    >{{ title() }}<span class="unit">{{ unit() }}</span></span
+  >
+  <span class="readouts">
+    @for (r of readouts(); track r.series.id) {
+      <span class="readout">
+        <span class="key" [class.dashed]="r.series.dashed" [style.--c]="r.series.colour"></span>
+        {{ r.series.label }}
+        <b>{{ r.value ?? '–' }}</b>
+      </span>
+    }
+  </span>
+</div>
+
+<div class="plot" (pointermove)="onMove($event)" (pointerleave)="hoverChange.emit(null)">
+  <svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
+    <line class="grid" x1="0" y1="0" x2="1000" y2="0" />
+    <line class="grid" x1="0" y1="50" x2="1000" y2="50" />
+    <line class="grid" x1="0" y1="100" x2="1000" y2="100" />
+    @for (p of paths(); track p.series.id) {
+      <path
+        class="line"
+        [class.dashed]="p.series.dashed"
+        [attr.d]="p.d"
+        [style.stroke]="p.series.colour"
+      />
+    }
+  </svg>
+  <span class="scale top">{{ top() }}</span>
+  @if (hover(); as f) {
+    <span class="cursor" [style.left.%]="f * 100"></span>
+  }
+</div>
