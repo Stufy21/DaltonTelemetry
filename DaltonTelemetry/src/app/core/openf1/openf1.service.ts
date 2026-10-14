@@ -2,7 +2,7 @@ import { inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { defer, from, Observable, of, throwError, timer } from 'rxjs';
-import { catchError, retry, switchMap, tap } from 'rxjs/operators';
+import { catchError, retry, switchMap, tap, timeout } from 'rxjs/operators';
 import {
   OF1CarData,
   OF1Driver,
@@ -17,10 +17,11 @@ import {
   OF1TeamRadio,
   OF1Weather,
 } from './openf1.model';
+import { DEFAULT_OPENF1_BASE_URL, OpenF1Config } from './openf1-config';
 import { Params, toQuery } from './openf1.query';
 import { RateWindow } from './rate-window';
+import { isServerUnavailable, SERVER_TIMEOUT_MS, ServerHealth } from './server-health';
 
-const BASE_URL = 'https://api.openf1.org/v1';
 /** The server's authenticated proxy (see src/server), used while a session is live. */
 const RELAY_URL = '/api/openf1';
 
@@ -39,6 +40,7 @@ const CACHE_NAME = 'openf1-v1';
 @Injectable({ providedIn: 'root' })
 export class OpenF1Service {
   private http = inject(HttpClient);
+  private config = inject(OpenF1Config);
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   /** Request budget, persisted in localStorage so reloads and other tabs share it. */
@@ -48,6 +50,8 @@ export class OpenF1Service {
   );
   private cooldownUntil = 0;
   private viaRelay = false;
+  /** Tracks the self-hosted server (when configured) so a dead one doesn't stall every request. */
+  private readonly selfHostedHealth = new ServerHealth();
 
   /**
    * Route requests through the server's authenticated proxy instead of calling OpenF1 directly.
@@ -147,11 +151,41 @@ export class OpenF1Service {
   }
 
   private get<T>(endpoint: string, params: Params, cache = false): Observable<T[]> {
-    const relay = this.viaRelay;
-    const url = `${relay ? RELAY_URL : BASE_URL}/${endpoint}?${toQuery(params)}`;
+    const path = `${endpoint}?${toQuery(params)}`;
+    if (this.viaRelay) return this.request<T>(`${RELAY_URL}/${path}`, true, cache);
 
-    const network$ = defer(() => timer(relay ? 0 : this.reserveSlot())).pipe(
-      switchMap(() => this.http.get<T[]>(url)),
+    const publicRequest = () => this.request<T>(`${DEFAULT_OPENF1_BASE_URL}/${path}`, false, cache);
+    if (!this.config.selfHosted) return publicRequest();
+
+    // Prefer the self-hosted server, but fall back to the public API while it is unreachable
+    // (that serves finished sessions; live ones need the self-hosted server).
+    if (this.selfHostedHealth.isDown()) return publicRequest();
+    return this.request<T>(`${this.config.baseUrl}/${path}`, true, cache, SERVER_TIMEOUT_MS).pipe(
+      tap(() => this.selfHostedHealth.markUp()),
+      catchError((err) => {
+        if (!isServerUnavailable(err)) return throwError(() => err);
+        console.warn('Self-hosted OpenF1 server unavailable, using the public API for a while.');
+        this.selfHostedHealth.markDown();
+        return publicRequest();
+      }),
+    );
+  }
+
+  /**
+   * One GET. `unlimited` skips the browser-side limiter (the server's proxy and a self-hosted
+   * OpenF1 pace themselves; only the public API needs it). `timeoutMs` bounds the wait.
+   */
+  private request<T>(
+    url: string,
+    unlimited: boolean,
+    cache: boolean,
+    timeoutMs?: number,
+  ): Observable<T[]> {
+    const network$ = defer(() => timer(unlimited ? 0 : this.reserveSlot())).pipe(
+      switchMap(() => {
+        const request$ = this.http.get<T[]>(url);
+        return timeoutMs ? request$.pipe(timeout(timeoutMs)) : request$;
+      }),
       retry({
         count: 2,
         delay: (err: HttpErrorResponse) => {
