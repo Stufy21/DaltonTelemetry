@@ -1,4 +1,4 @@
-import { Component, DestroyRef, effect, inject, untracked } from '@angular/core';
+import { Component, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -17,6 +17,8 @@ import { RadioPlayer } from './radio-player';
 export class FeedWidgetComponent {
   protected readonly store = inject(LiveTimingStore);
   protected readonly player = new RadioPlayer();
+  /** Photos that failed to load (F1's image host may lack a driver): the acronym is shown instead. */
+  protected readonly brokenPhotos = signal<ReadonlySet<string>>(new Set());
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.player.stop());
@@ -25,6 +27,10 @@ export class FeedWidgetComponent {
       this.store.session();
       untracked(() => this.player.stop());
     });
+  }
+
+  protected photoFailed(url: string): void {
+    this.brokenPhotos.update((set) => new Set(set).add(url));
   }
 
   protected isActive(url: string): boolean {

@@ -1,4 +1,4 @@
-export type WidgetId = 'leaderboard' | 'map' | 'telemetry' | 'feed';
+export type WidgetId = 'leaderboard' | 'championship' | 'map' | 'telemetry' | 'feed';
 export type ColumnId = 'main' | 'side';
 
 export interface Layout {
@@ -9,6 +9,7 @@ export interface Layout {
 
 export const WIDGET_TITLES: Record<WidgetId, string> = {
   leaderboard: 'Leaderboard',
+  championship: 'Championship',
   map: 'Track map',
   telemetry: 'Telemetry',
   feed: 'Race control & radio',
@@ -16,6 +17,7 @@ export const WIDGET_TITLES: Record<WidgetId, string> = {
 
 export const WIDGET_ICONS: Record<WidgetId, string> = {
   leaderboard: 'format_list_numbered',
+  championship: 'emoji_events',
   map: 'map',
   telemetry: 'speed',
   feed: 'campaign',
@@ -23,17 +25,17 @@ export const WIDGET_ICONS: Record<WidgetId, string> = {
 
 export const DEFAULT_LAYOUT: Layout = {
   main: ['leaderboard'],
-  side: ['map', 'telemetry', 'feed'],
+  side: ['championship', 'map', 'telemetry', 'feed'],
   hidden: [],
 };
 
-const ALL: WidgetId[] = ['leaderboard', 'map', 'telemetry', 'feed'];
+const ALL: WidgetId[] = ['leaderboard', 'championship', 'map', 'telemetry', 'feed'];
 const isWidgetId = (v: unknown): v is WidgetId => ALL.includes(v as WidgetId);
 
 /**
  * Makes any stored value a valid layout: unknown ids are dropped, duplicates removed, and any
  * widget that is neither placed nor hidden (e.g. added in a newer version) goes back to its
- * default column.
+ * default column, at its default position where the column is long enough.
  */
 export function normalizeLayout(raw: unknown): Layout {
   const source = (raw && typeof raw === 'object' ? raw : {}) as Partial<
@@ -53,7 +55,9 @@ export function normalizeLayout(raw: unknown): Layout {
 
   for (const id of ALL) {
     if (seen.has(id)) continue;
-    (DEFAULT_LAYOUT.main.includes(id) ? main : side).push(id);
+    const column = DEFAULT_LAYOUT.main.includes(id) ? main : side;
+    const defaults = DEFAULT_LAYOUT.main.includes(id) ? DEFAULT_LAYOUT.main : DEFAULT_LAYOUT.side;
+    column.splice(Math.min(defaults.indexOf(id), column.length), 0, id);
   }
   return { main, side, hidden };
 }

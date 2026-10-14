@@ -81,6 +81,40 @@ The relay is covered by tests against a fake upstream, and the server was run ag
 token endpoint (rejecting invalid credentials as expected). It has **not** been run against a real
 live session, because that needs an account.
 
+## Self-hosted OpenF1 (live data without the sponsor plan)
+
+[OpenF1](https://github.com/br-g/openf1) is open source (CC BY-NC-SA 4.0: non-commercial use only).
+You can run your own copy: it records the official live timing feed during a session and serves
+the same REST API this app already uses, with no rate limits. The app then polls it directly (no
+relay needed), so this also works with the static Cloudflare deployment.
+
+1. On an always-on machine (a small VPS is enough), clone `br-g/openf1` and use its
+   `docker-compose.yml`: `api`, `ingest-realtime`, `ingest-historical`, `mongo` and `mqtt`.
+2. Live **telemetry** (`car_data`, car positions) needs an F1 TV subscription token. Add it to the
+   `ingest-realtime` service as `F1_TOKEN` (see the guide linked from OpenF1's
+   `ingestor_livetiming/real_time/README.md`); tokens expire after about 4 days. Without it, the
+   other data (positions, intervals, laps, stints, race control, weather) should still be recorded.
+3. The ingestor must be running at least 1 hour before a race (15 minutes before practice and
+   qualifying), otherwise the start of the session is missed.
+4. Expose the `api` service (port 8000) over **HTTPS**, e.g. with Caddy or a Cloudflare Tunnel: the
+   site is served over HTTPS and browsers block plain-HTTP requests from it. The API already allows
+   cross-origin requests. Change the default MQTT password if you expose the broker.
+5. Point the app at it in `public/config.json`, no rebuild of the code needed:
+
+   ```json
+   { "openf1BaseUrl": "https://f1.example.com" }
+   ```
+
+   Leave it empty to keep using the public OpenF1 API. A full `.../v1` URL works too.
+
+   If your server doesn't answer (machine off, tunnel down, no reply within 8 s), the app falls back
+   to the public OpenF1 API for a minute and then tries your server again. That keeps finished
+   sessions working; a live session needs your server (the public API refuses it).
+
+The app side is tested against a fake local server (requests go to the configured URL, a live
+session is detected and polled, and with the server down the app falls back to the public API). The OpenF1 containers themselves, the F1 TV token and the HTTPS
+setup have **not** been run from here, so expect some trial and error on the first session.
+
 ## Deploying to Cloudflare
 
 The app can be published as a **static site** on Cloudflare (Workers static assets): every page is
@@ -99,7 +133,7 @@ repository) with:
 | Setting | Value |
 | --- | --- |
 | Root directory | `DaltonTelemetry` |
-| Build command | `npm install && npm run build:cloudflare` |
+| Build command | leave empty (`wrangler deploy` builds the site, see `wrangler.jsonc`) |
 | Deploy command | `npx wrangler deploy` |
 
 What this deployment does and does not include:
@@ -113,5 +147,5 @@ What this deployment does and does not include:
 - Data comes straight from the browser to OpenF1, Jolpica and Wikipedia, so nothing else has to be
   configured. `package-lock.json` is git-ignored in this project; commit it (or remove it from
   `.gitignore`) if you want reproducible installs on Cloudflare's build machines.
-- Nothing has been deployed from this repository yet: that needs your Cloudflare account.
+- The site is published at https://daltontelemetry.thomas-stufano.workers.dev.
 

@@ -1,0 +1,53 @@
+@switch (base().state) {
+  @case ('loading') {
+    <div class="state"><mat-spinner diameter="28" /></div>
+  }
+  @case ('unavailable') {
+    <p class="state">Championship points are awarded in races and sprints.</p>
+  }
+  @case ('error') {
+    <p class="state">Could not load the championship standings.</p>
+  }
+  @default {
+    @if (!started()) {
+      <p class="note">Standings entering the race. Points update once it starts.</p>
+    }
+    <mat-tab-group animationDuration="0ms" mat-stretch-tabs="false">
+      <mat-tab label="Drivers">
+        <ng-container *ngTemplateOutlet="list; context: { rows: drivers() }" />
+      </mat-tab>
+      <mat-tab label="Teams">
+        <ng-container *ngTemplateOutlet="list; context: { rows: teams() }" />
+      </mat-tab>
+    </mat-tab-group>
+  }
+}
+
+<ng-template #list let-rows="rows">
+  <ol class="standings">
+    @for (row of rows; track row.key) {
+      <li [style.--c]="row.colour">
+        <span class="pos">{{ row.position }}</span>
+        <span class="name">
+          <span class="label">{{ row.label }}</span>
+          @if (row.detail) {
+            <span class="detail">{{ row.detail }}</span>
+          }
+        </span>
+        <span class="move" [class.up]="move(row) > 0" [class.down]="move(row) < 0">
+          @if (move(row) > 0) {
+            ▲{{ move(row) }}
+          } @else if (move(row) < 0) {
+            ▼{{ -move(row) }}
+          }
+        </span>
+        <span class="gain">
+          @if (row.gained) {
+            +{{ row.gained }}
+          }
+        </span>
+        <span class="points">{{ row.points }}</span>
+      </li>
+    }
+  </ol>
+</ng-template>
