@@ -1,15 +1,45 @@
-<mat-grid-list cols="1" rowHeight="200px" class="circuit-grid">
-@for (circuit of circuits(); track circuit) {
-    <mat-grid-tile
-      [colspan]="1">
-         <mat-card class="circuit-card" appearance="outlined">
-          <mat-card-header>
-            <div mat-card-avatar class="example-header-image"></div>
-            <mat-card-title>{{circuits().indexOf(circuit) + 1}}. {{circuit.circuitName}}</mat-card-title>
-            <mat-card-subtitle style="align-items: center;">{{circuit.Location.locality}}, {{circuit.Location.country}}</mat-card-subtitle>
-          </mat-card-header>
-          <img mat-card-image [src]="circuit.photoUrl" width="6%" alt="Photo circuit">
-        </mat-card>
-    </mat-grid-tile>
+<section class="stats-page">
+  <header class="page-header">
+    <div>
+      <h2>2026 Circuits</h2>
+      <p>The season calendar in race order.</p>
+    </div>
+    @if (!loading() && circuits().length) {
+      <span class="count">{{ circuits().length }} circuits</span>
+    }
+  </header>
+
+  @if (loading()) {
+    <div class="state">
+      <mat-spinner diameter="40" />
+      <span>Loading circuits…</span>
+    </div>
+  } @else if (!circuits().length) {
+    <div class="state">Could not load the circuits. Try again in a moment.</div>
+  } @else {
+    <div class="circuit-grid">
+      @for (circuit of circuits(); track circuit.circuitId; let i = $index) {
+        <article class="circuit-card">
+          <span class="round">{{ i + 1 }}</span>
+          <div class="map">
+            @if (brokenImages().has(circuit.circuitId)) {
+              <mat-icon class="fallback" aria-hidden="true">route</mat-icon>
+            } @else {
+              <img
+                class="invert-on-dark"
+                [src]="circuit.photoUrl"
+                [alt]="circuit.circuitName + ' layout'"
+                loading="lazy"
+                (error)="markImageBroken(circuit.circuitId)"
+              />
+            }
+          </div>
+          <div class="meta">
+            <h3>{{ circuit.circuitName }}</h3>
+            <p>{{ circuit.Location.locality }}, {{ circuit.Location.country }}</p>
+          </div>
+        </article>
+      }
+    </div>
   }
-</mat-grid-list>
+</section>

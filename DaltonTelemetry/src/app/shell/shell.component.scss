@@ -1,78 +1,126 @@
 /* ── Layout ─────────────────────────────────── */
 
-.shell-container {
+.shell {
   height: 100vh;
+  background: transparent;
 }
 
 /* ── Sidenav ─────────────────────────────────── */
 
-.shell-sidenav {
-  width: 240px;
+.sidenav {
+  width: 248px;
   display: flex;
   flex-direction: column;
-  background: var(--mat-sys-surface-container-low);
-  border-right: none;
+  padding: 16px 12px;
+  background: var(--dt-card);
+  border-right: 1px solid var(--dt-border);
+  border-radius: 0;
 }
 
-.sidenav-brand {
+.brand {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 0 16px;
-  height: 63px;
-  flex-shrink: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--mat-sys-on-surface);
-  letter-spacing: 0.01em;
-  //border-bottom: 1px solid var(--mat-sys-outline-variant);
+  gap: 2px;
+  margin-bottom: 20px;
+  padding: 14px 14px 12px;
+  overflow: hidden;
+  border-radius: 14px;
+  /* the DaltonTV wordmark is white, so the tile stays dark navy in both themes */
+  background:
+    radial-gradient(120% 90% at 85% -20%, #0173b1 0%, transparent 60%),
+    linear-gradient(160deg, #003263, #012754);
+  box-shadow: var(--dt-shadow-lg);
+  text-decoration: none;
+
+  /* orange sweep along the bottom edge, echoing the round logo */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--dt-orange) 60%, #f96a1d);
+  }
 }
 
-.brand-icon {
-  color: var(--mat-sys-primary);
-  font-size: 26px;
-  width: 26px;
-  height: 26px;
+.brand-mark {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.brand-product {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--dt-orange);
+  padding-left: 0.42em;
+}
+
+.nav-heading {
+  margin: 0 12px 8px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.sidenav-footer {
+  margin: auto 12px 0;
+  padding-top: 16px;
+  font-size: 0.6875rem;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 /* ── Nav tree ─────────────────────────────────── */
 
 .nav-tree {
   background: transparent;
-  padding: 8px 0;
 }
 
-/* Shared styles for both leaf and group nav items */
 .nav-item,
 .nav-group {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
   width: 100%;
-  box-sizing: border-box;
-  border-radius: 20px;
+  padding: 10px 12px;
+  border-radius: 12px;
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.875rem;
   font-weight: 500;
-  letter-spacing: 0.01em;
-  transition: background 150ms ease;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+
+  &:hover {
+    background: var(--dt-subtle);
+    color: var(--mat-sys-on-surface);
+  }
 }
 
 .nav-item {
   text-decoration: none;
 
-  &:hover {
-    background: var(--mat-sys-surface-container-highest);
-    color: var(--mat-sys-on-surface);
-  }
-
   &.nav-active {
-    background: var(--mat-sys-secondary-container);
-    color: var(--mat-sys-on-secondary-container);
+    background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent);
+    color: var(--mat-sys-primary);
+    font-weight: 600;
 
-    .nav-icon {
-      color: var(--mat-sys-on-secondary-container);
+    /* accent bar on the active item */
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      bottom: 10px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--mat-sys-primary);
     }
   }
 }
@@ -83,11 +131,7 @@
   border: none;
   cursor: pointer;
   text-align: left;
-
-  &:hover {
-    background: var(--mat-sys-surface-container-highest);
-    color: var(--mat-sys-on-surface);
-  }
+  font-family: inherit;
 
   .expand-icon {
     margin-left: auto;
@@ -95,7 +139,6 @@
     width: 18px;
     height: 18px;
     flex-shrink: 0;
-    color: var(--mat-sys-on-surface-variant);
   }
 }
 
@@ -120,6 +163,19 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  /* soft brand glow behind the pages */
+  background:
+    radial-gradient(
+      900px 420px at 0% -8%,
+      color-mix(in srgb, var(--mat-sys-primary) 14%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      700px 360px at 100% -12%,
+      color-mix(in srgb, var(--dt-orange) 11%, transparent),
+      transparent 70%
+    ),
+    var(--mat-sys-surface);
 }
 
 /* ── Toolbar ─────────────────────────────────── */
@@ -128,21 +184,36 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--mat-sys-surface);
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
   flex-shrink: 0;
+  height: 64px;
   gap: 4px;
+  background: color-mix(in srgb, var(--mat-sys-surface) 72%, transparent);
+  backdrop-filter: blur(14px) saturate(160%);
+  border-bottom: 1px solid var(--dt-border);
+}
+
+.toolbar-logo {
+  margin-left: 4px;
+  border-radius: 50%;
 }
 
 .toolbar-title {
-  font-size: 1rem;
+  margin: 0 0 0 8px;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--mat-sys-on-surface);
-  margin-left: 4px;
 }
 
 .toolbar-spacer {
   flex: 1;
+}
+
+.theme-selected {
+  color: var(--mat-sys-primary);
+}
+
+.theme-check {
+  margin: 0 0 0 auto !important;
 }
 
 /* ── Main ─────────────────────────────────── */
@@ -151,15 +222,19 @@
   flex: 1;
   padding: 24px;
   overflow-y: auto;
+
+  @media (max-width: 599px) {
+    padding: 16px 12px;
+  }
 }
 
 /* ── Footer ─────────────────────────────────── */
 
 .shell-footer {
   flex-shrink: 0;
-  padding: 12px 24px;
+  padding: 10px 24px;
   text-align: center;
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  border-top: 1px solid var(--dt-border);
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.75rem;
 }

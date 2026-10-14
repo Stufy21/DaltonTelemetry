@@ -1,16 +1,14 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
-import { MatGridListModule } from '@angular/material/grid-list';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ErgastCircuit } from '../../core/ergast/ergast.model';
 import { ErgastService } from '../../core/ergast/ergast.service';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { CIRCUIT_SVG_MAP } from '../../consts/CircuitSvgMap';
 
 @Component({
   selector: 'app-statistics',
-  imports: [MatGridListModule, MatProgressSpinnerModule, MatCardModule, MatButtonModule],
+  imports: [MatIconModule, MatProgressSpinnerModule],
   templateUrl: './statistics.component.html',
   styleUrl: './statistics.component.scss',
 })
@@ -19,6 +17,8 @@ export class StatisticsComponent implements OnInit {
 
   circuits = signal<ErgastCircuit[]>([]);
   loading = signal(true);
+  /** Circuits whose layout image failed to load (the SVG source is a third-party repo). */
+  brokenImages = signal<ReadonlySet<string>>(new Set());
 
   ngOnInit(): void {
     forkJoin([this.ergast.getCircuits(), this.ergast.getRaces()]).subscribe({
@@ -33,6 +33,10 @@ export class StatisticsComponent implements OnInit {
       },
       error: () => this.loading.set(false),
     });
+  }
+
+  markImageBroken(circuitId: string): void {
+    this.brokenImages.update((set) => new Set(set).add(circuitId));
   }
 
   getCircuitSvgUrl(circuitId: string): string {

@@ -15,24 +15,32 @@ html {
         secondary: my-theme.$secondary-palette,
         tertiary: my-theme.$tertiary-palette,
       ),
-      typography: Roboto,
+      typography: Inter,
       density: 0,
     )
   );
+
+  // The theme's colors use light-dark(), so the active scheme decides the palette.
+  // Follow the OS by default; ThemeService sets data-theme to force one (see theme.service.ts).
+  color-scheme: light dark;
+
+  &[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  &[data-theme='dark'] {
+    color-scheme: dark;
+  }
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: dark;
-
   // Set a default background, font and text colors for the application using
   // Angular Material's system-level CSS variables. Learn more about these
   // variables at https://material.angular.dev/guide/system-variables
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
+  -webkit-font-smoothing: antialiased;
 
   // Reset the user agent margin.
   margin: 0;
