@@ -81,3 +81,37 @@ The relay is covered by tests against a fake upstream, and the server was run ag
 token endpoint (rejecting invalid credentials as expected). It has **not** been run against a real
 live session, because that needs an account.
 
+## Deploying to Cloudflare
+
+The app can be published as a **static site** on Cloudflare (Workers static assets): every page is
+either prerendered or rendered in the browser, so no server is needed. Configuration lives in
+`wrangler.jsonc`, `public/_headers` (cache and security headers) and `.node-version`.
+
+```bash
+npm run preview:cloudflare   # build + run it locally with wrangler (no account needed)
+npx wrangler login           # once, to link your Cloudflare account
+npm run deploy:cloudflare    # build + publish
+```
+
+Or connect the Git repository in the Cloudflare dashboard (Workers & Pages → Create → import a
+repository) with:
+
+| Setting | Value |
+| --- | --- |
+| Root directory | `DaltonTelemetry` |
+| Build command | `npm install && npm run build:cloudflare` |
+| Deploy command | `npx wrangler deploy` |
+
+What this deployment does and does not include:
+
+- `build:cloudflare` builds with `--output-mode=static` (no Express server) and copies the
+  client-rendered shell to `index.html`, which Cloudflare serves for routes without a file of their
+  own (`/live-timing`, `/reports/stats/:circuit`, deep links).
+- The **live relay is not part of it**: it needs a long-lived Node server (see "Live data"), so on
+  Cloudflare the live timing page replays finished sessions, like the free OpenF1 tier allows.
+  `/api/live/status` is not served there and the app treats that as "no relay".
+- Data comes straight from the browser to OpenF1, Jolpica and Wikipedia, so nothing else has to be
+  configured. `package-lock.json` is git-ignored in this project; commit it (or remove it from
+  `.gitignore`) if you want reproducible installs on Cloudflare's build machines.
+- Nothing has been deployed from this repository yet: that needs your Cloudflare account.
+

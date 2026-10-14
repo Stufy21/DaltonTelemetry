@@ -28,7 +28,12 @@ export class LiveFeedService {
   isAvailable(): Promise<boolean> {
     if (!this.isBrowser) return Promise.resolve(false);
     this.available ??= fetch('/api/live/status')
-      .then((r) => (r.ok ? r.json() : { enabled: false }))
+      // A static host answers unknown paths with the app's HTML page: that is "no relay", too.
+      .then((r) =>
+        r.ok && r.headers.get('content-type')?.includes('application/json')
+          ? r.json()
+          : { enabled: false },
+      )
       .then((s: { enabled?: boolean }) => !!s.enabled)
       .catch(() => false);
     return this.available;
