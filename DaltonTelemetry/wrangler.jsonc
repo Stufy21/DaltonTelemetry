@@ -3,7 +3,7 @@
 // publish with `npm run deploy:cloudflare`. See the README for the first-time setup.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "dalton-telemetry",
+  "name": "daltontelemetry",
   "compatibility_date": "2026-10-14",
   "assets": {
     "directory": "./dist/DaltonTelemetry/browser",
