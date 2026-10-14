@@ -1,0 +1,209 @@
+:host {
+  display: block;
+  overflow-x: auto;
+}
+
+.board {
+  min-width: 780px;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 40px 118px 64px 38px 74px 74px 86px 86px 62px 62px 62px;
+  align-items: center;
+  column-gap: 6px;
+  padding: 0 14px;
+  height: 40px;
+  border-bottom: 1px solid var(--dt-border);
+  transition: background 120ms ease;
+
+  &:not(.head):hover {
+    background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+  }
+
+  &:not(.head) {
+    cursor: pointer;
+  }
+
+  &.selected {
+    background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent);
+    box-shadow: inset 3px 0 0 var(--mat-sys-primary);
+  }
+
+  &.in-pit {
+    background: color-mix(in srgb, var(--mat-sys-tertiary) 14%, transparent);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.head {
+  height: 36px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--dt-card-raised);
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.c-pos {
+  display: flex;
+  justify-content: center;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 7px;
+    background: var(--dt-subtle);
+    font-weight: 700;
+  }
+}
+
+/* Podium positions get a touch of colour. */
+.row[data-pos='1'] .c-pos span {
+  background: #f5c400;
+  color: #1a1400;
+}
+.row[data-pos='2'] .c-pos span {
+  background: light-dark(#cbd5e1, #94a3b8);
+  color: #0f172a;
+}
+.row[data-pos='3'] .c-pos span {
+  background: #d98b4a;
+  color: #1f1002;
+}
+
+.c-driver {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.team-bar {
+  width: 4px;
+  height: 22px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.acronym {
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.number,
+.muted,
+.tyre-age {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.pit-badge {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--mat-sys-tertiary);
+  color: var(--mat-sys-on-tertiary);
+  font-size: 0.625rem;
+  font-weight: 700;
+}
+
+.c-tyre {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tyre {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  font-size: 0.6875rem;
+  font-weight: 700;
+
+  &[data-compound='SOFT'] {
+    color: var(--dt-tyre-soft);
+  }
+  &[data-compound='MEDIUM'] {
+    color: var(--dt-tyre-medium);
+  }
+  &[data-compound='HARD'] {
+    color: var(--dt-tyre-hard);
+  }
+  &[data-compound='INTERMEDIATE'] {
+    color: var(--dt-tyre-inter);
+  }
+  &[data-compound='WET'] {
+    color: var(--dt-tyre-wet);
+  }
+}
+
+.c-pits,
+.c-gap,
+.c-int,
+.c-lap,
+.c-sector {
+  text-align: right;
+}
+
+.c-int,
+.c-pits {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.c-gap {
+  font-weight: 500;
+}
+
+[data-tone='purple'] {
+  color: var(--dt-purple);
+  font-weight: 700;
+}
+
+[data-tone='green'] {
+  color: var(--dt-green);
+  font-weight: 700;
+}
+
+.c-sector[data-tone='yellow'] {
+  color: var(--dt-yellow);
+}
+
+.head [data-tone] {
+  color: inherit;
+}
+
+.empty {
+  padding: 56px 16px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.slot {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-size: 0.625rem;
+  font-weight: 700;
+}

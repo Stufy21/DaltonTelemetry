@@ -7,20 +7,26 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "build:cloudflare": "ng build --output-mode=static && node scripts/cloudflare-postbuild.mjs",
+    "preview:cloudflare": "npm run build:cloudflare && wrangler dev",
+    "deploy:cloudflare": "npm run build:cloudflare && wrangler deploy",
     "serve:ssr:DaltonTelemetry": "node dist/DaltonTelemetry/server/server.mjs"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
   "dependencies": {
+    "@angular/cdk": "^22.0.1",
     "@angular/common": "^22.0.0",
     "@angular/compiler": "^22.0.0",
     "@angular/core": "^22.0.0",
     "@angular/forms": "^22.0.0",
+    "@angular/material": "^22.0.1",
     "@angular/platform-browser": "^22.0.0",
     "@angular/platform-server": "^22.0.0",
     "@angular/router": "^22.0.0",
     "@angular/ssr": "^22.0.1",
     "express": "^5.1.0",
+    "mqtt": "^5.16.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -33,6 +39,7 @@
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
-    "vitest": "^4.0.8"
+    "vitest": "^4.0.8",
+    "wrangler": "^4.151.0"
   }
 }

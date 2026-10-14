@@ -1,0 +1,99 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: inherit;
+}
+
+path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.track {
+  stroke: var(--dt-border);
+
+  &.thin {
+    stroke-width: 6;
+  }
+
+  &.band {
+    stroke-width: 13;
+    stroke: var(--dt-subtle);
+  }
+}
+
+.speed {
+  stroke-width: 6;
+  transition: stroke 150ms ease;
+}
+
+.band {
+  stroke-width: 13;
+
+  &.throttle {
+    stroke: var(--dt-green);
+  }
+
+  &.brake {
+    stroke: var(--dt-red);
+  }
+}
+
+.tick {
+  stroke: var(--mat-sys-outline);
+  stroke-width: 1.5;
+}
+
+.tick-label {
+  fill: var(--mat-sys-on-surface-variant);
+  font-size: 8px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.band-label {
+  fill: var(--mat-sys-on-surface-variant);
+  font-size: 6.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+text {
+  fill: var(--mat-sys-on-surface);
+  text-anchor: middle;
+}
+
+.speed-value {
+  font-size: 40px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.rpm-value {
+  font-size: 19px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit,
+.gear-key {
+  fill: var(--mat-sys-on-surface-variant);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.gear {
+  font-size: 17px;
+  font-weight: 700;
+}
