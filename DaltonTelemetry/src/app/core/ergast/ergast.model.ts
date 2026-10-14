@@ -59,3 +59,51 @@ export interface WikimediaPageSummary {
   thumbnail?: WikimediaThumbnail;
   originalimage?: WikimediaThumbnail;
 }
+
+export interface ErgastDriver {
+  driverId: string;
+  code?: string;
+  givenName: string;
+  familyName: string;
+  nationality: string;
+}
+
+export interface ErgastConstructor {
+  constructorId: string;
+  name: string;
+}
+
+export interface ErgastFastestLap {
+  rank: string;
+  lap: string;
+  Time?: { time: string };
+  AverageSpeed?: { units: string; speed: string };
+}
+
+export interface ErgastResultRow {
+  position: string;
+  Driver: ErgastDriver;
+  Constructor: ErgastConstructor;
+  FastestLap?: ErgastFastestLap;
+}
+
+export interface ErgastQualifyingRow {
+  position: string;
+  Driver: ErgastDriver;
+  Constructor: ErgastConstructor;
+}
+
+/** A past Grand Prix as returned by the circuit history endpoints. */
+export interface ErgastHistoricRace {
+  season: string;
+  round: string;
+  raceName: string;
+  date: string;
+  Circuit: ErgastCircuit;
+  Results?: ErgastResultRow[];
+  QualifyingResults?: ErgastQualifyingRow[];
+}
+
+export interface ErgastHistoricRacesResponse {
+  MRData: { RaceTable: { Races: ErgastHistoricRace[] } };
+}

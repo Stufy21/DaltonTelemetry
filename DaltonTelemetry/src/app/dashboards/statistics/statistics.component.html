@@ -19,7 +19,7 @@
   } @else {
     <div class="circuit-grid">
       @for (circuit of circuits(); track circuit.circuitId; let i = $index) {
-        <article class="circuit-card">
+        <a class="circuit-card" [routerLink]="['/reports/stats', circuit.circuitId]">
           <span class="round">{{ i + 1 }}</span>
           <div class="map">
             @if (brokenImages().has(circuit.circuitId)) {
@@ -38,7 +38,7 @@
             <h3>{{ circuit.circuitName }}</h3>
             <p>{{ circuit.Location.locality }}, {{ circuit.Location.country }}</p>
           </div>
-        </article>
+        </a>
       }
     </div>
   }

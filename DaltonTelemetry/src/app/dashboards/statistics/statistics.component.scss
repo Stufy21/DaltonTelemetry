@@ -48,6 +48,9 @@
   border: 1px solid var(--dt-border);
   border-radius: var(--dt-radius);
   box-shadow: var(--dt-shadow);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
   transition:
     transform 160ms ease,
     box-shadow 160ms ease,

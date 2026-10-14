@@ -84,6 +84,7 @@ export class ShellComponent {
     const path = this.url().split(/[?#]/)[0];
     const leaves = this.navTree.flatMap((n) => n.children ?? [n]);
     if (path === '/settings') return 'Settings';
+    if (path.startsWith('/reports/stats/')) return 'Circuit statistics';
     return leaves.find((n) => n.route === path)?.label ?? 'DaltonTelemetry';
   });
 

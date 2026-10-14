@@ -12,6 +12,13 @@ export const routes: Routes = [
     loadComponent: () => import('./settings/settings.component').then((m) => m.SettingsComponent),
   },
   {
+    path: 'reports/stats/:circuitId',
+    loadComponent: () =>
+      import('./dashboards/circuit-detail/circuit-detail.component').then(
+        (m) => m.CircuitDetailComponent,
+      ),
+  },
+  {
     path: 'reports/stats',
     loadComponent: () =>
       import('./dashboards/statistics/statistics.component').then((m) => m.StatisticsComponent),

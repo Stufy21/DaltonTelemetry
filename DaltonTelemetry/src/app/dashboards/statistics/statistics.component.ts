@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -8,7 +9,7 @@ import { CIRCUIT_SVG_MAP } from '../../consts/CircuitSvgMap';
 
 @Component({
   selector: 'app-statistics',
-  imports: [MatIconModule, MatProgressSpinnerModule],
+  imports: [MatIconModule, MatProgressSpinnerModule, RouterLink],
   templateUrl: './statistics.component.html',
   styleUrl: './statistics.component.scss',
 })
@@ -27,7 +28,11 @@ export class StatisticsComponent implements OnInit {
         this.circuits.set(
           circuits
             .map((circuit) => ({ ...circuit, photoUrl: this.getCircuitSvgUrl(circuit.circuitId) }))
-            .sort((a, b) => (roundByCircuitId.get(a.circuitId) ?? 999) - (roundByCircuitId.get(b.circuitId) ?? 999)),
+            .sort(
+              (a, b) =>
+                (roundByCircuitId.get(a.circuitId) ?? 999) -
+                (roundByCircuitId.get(b.circuitId) ?? 999),
+            ),
         );
         this.loading.set(false);
       },
@@ -44,5 +49,3 @@ export class StatisticsComponent implements OnInit {
     return `https://raw.githubusercontent.com/julesr0y/f1-circuits-svg/refs/heads/main/circuits/minimal/black-outline/${slug}.svg`;
   }
 }
-
-
