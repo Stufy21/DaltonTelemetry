@@ -5,6 +5,8 @@ import { defer, from, Observable, of, throwError, timer } from 'rxjs';
 import { catchError, retry, switchMap, tap, timeout } from 'rxjs/operators';
 import {
   OF1CarData,
+  OF1ChampionshipDriver,
+  OF1ChampionshipTeam,
   OF1Driver,
   OF1Interval,
   OF1Lap,
@@ -104,6 +106,19 @@ export class OpenF1Service {
     const params: Params = { session_key: sessionKey };
     if (sinceInclusive) params['date_start>='] = sinceInclusive;
     return this.get<OF1Lap>('laps', params, cache);
+  }
+
+  /** Drivers' standings entering a Race or Sprint (empty for other session types). */
+  getChampionshipDrivers(sessionKey: number, cache = false): Observable<OF1ChampionshipDriver[]> {
+    return this.get<OF1ChampionshipDriver>(
+      'championship_drivers',
+      { session_key: sessionKey },
+      cache,
+    );
+  }
+
+  getChampionshipTeams(sessionKey: number, cache = false): Observable<OF1ChampionshipTeam[]> {
+    return this.get<OF1ChampionshipTeam>('championship_teams', { session_key: sessionKey }, cache);
   }
 
   getStints(sessionKey: number, cache = false): Observable<OF1Stint[]> {

@@ -15,6 +15,7 @@ import { formatElapsed } from './format';
 import { FlagStripComponent } from './flag-strip/flag-strip.component';
 import { ComparisonSheetComponent } from './comparison/comparison-sheet.component';
 import { ComparisonStore } from './comparison/comparison.store';
+import { ChampionshipWidgetComponent } from './championship/championship-widget.component';
 import { FeedWidgetComponent } from './feed-widget/feed-widget.component';
 import { TelemetryFeedStore } from './telemetry-widget/telemetry-feed.store';
 import { TelemetryWidgetComponent } from './telemetry-widget/telemetry-widget.component';
@@ -44,6 +45,7 @@ import { LiveTimingStore, PLAYBACK_SPEEDS } from './live-timing.store';
     FlagStripComponent,
     ComparisonSheetComponent,
     LeaderboardComponent,
+    ChampionshipWidgetComponent,
     FeedWidgetComponent,
     TelemetryWidgetComponent,
     TrackMapComponent,

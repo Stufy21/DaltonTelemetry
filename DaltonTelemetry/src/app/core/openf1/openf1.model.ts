@@ -114,3 +114,22 @@ export interface OF1CarData {
   /** 0 or 100 */
   brake: number;
 }
+
+/** Standings entering the race (`*_start`) and as they stand now (`*_current`). */
+export interface OF1ChampionshipDriver {
+  session_key: number;
+  driver_number: number;
+  position_start: number | null;
+  position_current: number | null;
+  points_start: number | null;
+  points_current: number | null;
+}
+
+export interface OF1ChampionshipTeam {
+  session_key: number;
+  team_name: string;
+  position_start: number | null;
+  position_current: number | null;
+  points_start: number | null;
+  points_current: number | null;
+}
