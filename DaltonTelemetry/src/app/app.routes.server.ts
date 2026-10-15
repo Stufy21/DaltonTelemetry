@@ -13,7 +13,12 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client,
   },
   {
-    path: 'reports/stats/:circuitId',
+    path: 'statistics/:circuitId',
+    renderMode: RenderMode.Client,
+  },
+  // Old Statistics URLs only redirect, which has to happen in the browser.
+  {
+    path: 'reports/**',
     renderMode: RenderMode.Client,
   },
   {

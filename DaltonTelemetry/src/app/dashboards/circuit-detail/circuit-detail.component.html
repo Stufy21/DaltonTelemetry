@@ -1,5 +1,5 @@
 <section class="detail">
-  <a class="back" routerLink="/reports/stats"><mat-icon>arrow_back</mat-icon>All circuits</a>
+  <a class="back" routerLink="/statistics"><mat-icon>arrow_back</mat-icon>All circuits</a>
 
   @switch (state().status) {
     @case ('loading') {
@@ -14,11 +14,16 @@
     @default {
       @if (ready(); as r) {
         <header class="hero">
-          <div>
-            <h2>{{ r.circuit?.circuitName ?? 'Circuit' }}</h2>
-            @if (r.circuit) {
-              <p>{{ r.circuit.Location.locality }}, {{ r.circuit.Location.country }}</p>
-            }
+          <div class="title">
+            <div class="outline">
+              <app-circuit-outline [circuitId]="circuitId()" />
+            </div>
+            <div>
+              <h2>{{ r.circuit?.circuitName ?? 'Circuit' }}</h2>
+              @if (r.circuit) {
+                <p>{{ r.circuit.Location.locality }}, {{ r.circuit.Location.country }}</p>
+              }
+            </div>
           </div>
           @if (r.stats.races) {
             <div class="chips">

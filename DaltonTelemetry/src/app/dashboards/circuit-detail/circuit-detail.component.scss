@@ -45,6 +45,22 @@
   }
 }
 
+.title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.outline {
+  flex-shrink: 0;
+  width: 104px;
+  height: 76px;
+  padding: 8px;
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  background: var(--dt-subtle);
+}
+
 .chips {
   display: flex;
   gap: 8px;
