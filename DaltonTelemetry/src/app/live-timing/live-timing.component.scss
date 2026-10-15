@@ -65,8 +65,12 @@
   &.year {
     width: 110px;
   }
+  &.meeting {
+    width: 220px;
+    max-width: 100%;
+  }
   &.session {
-    width: 260px;
+    width: 190px;
     max-width: 100%;
   }
   &.speed {

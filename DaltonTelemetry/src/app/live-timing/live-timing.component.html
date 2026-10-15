@@ -10,6 +10,18 @@
         </mat-select>
       </mat-form-field>
 
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="picker meeting">
+        <mat-label>Grand Prix</mat-label>
+        <mat-select
+          [value]="meeting()?.key ?? null"
+          (selectionChange)="selectMeeting($event.value)"
+        >
+          @for (m of meetings(); track m.key) {
+            <mat-option [value]="m.key">{{ m.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
       <mat-form-field appearance="outline" subscriptSizing="dynamic" class="picker session">
         <mat-label>Session</mat-label>
         <mat-select
@@ -17,8 +29,8 @@
           [compareWith]="compareSessions"
           (selectionChange)="store.selectSession($event.value)"
         >
-          @for (s of store.sessions(); track s.session_key) {
-            <mat-option [value]="s">{{ sessionLabel(s) }}</mat-option>
+          @for (s of meeting()?.sessions ?? []; track s.session_key) {
+            <mat-option [value]="s">{{ s.session_name }}</mat-option>
           }
         </mat-select>
       </mat-form-field>

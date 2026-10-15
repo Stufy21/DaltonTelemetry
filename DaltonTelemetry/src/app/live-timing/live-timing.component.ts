@@ -1,4 +1,4 @@
-import { Component, afterNextRender, inject } from '@angular/core';
+import { Component, afterNextRender, computed, inject } from '@angular/core';
 import { CdkDrag, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { DecimalPipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,6 +12,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { OF1Session } from '../core/openf1/openf1.model';
 import { formatElapsed } from './format';
+import { groupMeetings } from './meetings';
 import { FlagStripComponent } from './flag-strip/flag-strip.component';
 import { ComparisonSheetComponent } from './comparison/comparison-sheet.component';
 import { ComparisonStore } from './comparison/comparison.store';
@@ -70,8 +71,17 @@ export class LiveTimingComponent {
     afterNextRender(() => this.store.start());
   }
 
-  protected sessionLabel(s: OF1Session): string {
-    return `${s.country_name} · ${s.session_name}`;
+  /** The season's Grand Prix weekends, each with its sessions. */
+  protected readonly meetings = computed(() => groupMeetings(this.store.sessions()));
+  /** The weekend of the session on screen; the session picker lists its sessions. */
+  protected readonly meeting = computed(
+    () => this.meetings().find((m) => m.key === this.store.session()?.meeting_key) ?? null,
+  );
+
+  /** Picking a weekend opens its most recent session (the Race, once it has been run). */
+  protected selectMeeting(key: number): void {
+    const meeting = this.meetings().find((m) => m.key === key);
+    if (meeting) this.store.selectSession(meeting.latest);
   }
 
   protected compareSessions(a: OF1Session | null, b: OF1Session | null): boolean {
