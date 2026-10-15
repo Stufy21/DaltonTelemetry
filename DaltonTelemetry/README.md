@@ -81,6 +81,19 @@ The relay is covered by tests against a fake upstream, and the server was run ag
 token endpoint (rejecting invalid credentials as expected). It has **not** been run against a real
 live session, because that needs an account.
 
+## Circuit outlines
+
+The circuit layouts on the Statistics pages are drawn from OpenF1's car coordinates (one clean lap
+per circuit), the same data the live track map uses. They are generated once into
+`src/app/dashboards/statistics/circuit-outlines.ts`:
+
+```bash
+node scripts/generate-circuit-outlines.mjs   # about 3-5 minutes on OpenF1's free API
+```
+
+Run it again only when a circuit is added or changes its layout (add the circuit to the table at
+the top of the script: Ergast circuit id -> OpenF1 `circuit_key`).
+
 ## Self-hosted OpenF1 (live data without the sponsor plan)
 
 [OpenF1](https://github.com/br-g/openf1) is open source (CC BY-NC-SA 4.0: non-commercial use only).
@@ -140,7 +153,7 @@ What this deployment does and does not include:
 
 - `build:cloudflare` builds with `--output-mode=static` (no Express server) and copies the
   client-rendered shell to `index.html`, which Cloudflare serves for routes without a file of their
-  own (`/live-timing`, `/reports/stats/:circuit`, deep links).
+  own (`/live-timing`, `/statistics/:circuit`, deep links).
 - The **live relay is not part of it**: it needs a long-lived Node server (see "Live data"), so on
   Cloudflare the live timing page replays finished sessions, like the free OpenF1 tier allows.
   `/api/live/status` is not served there and the app treats that as "no relay".

@@ -8,6 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { catchError, map, of, startWith, switchMap } from 'rxjs';
 import { ErgastCircuit } from '../../core/ergast/ergast.model';
 import { ErgastService } from '../../core/ergast/ergast.service';
+import { CircuitOutlineComponent } from '../circuit-outline/circuit-outline.component';
 import { buildCircuitStats, CircuitStats, RankedEntry } from './circuit-stats';
 
 type State =
@@ -20,16 +21,27 @@ const TOP = 5;
 /** Historical statistics of one circuit: winners, poles, lap record and every edition. */
 @Component({
   selector: 'app-circuit-detail',
-  imports: [DecimalPipe, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, RouterLink],
+  imports: [
+    CircuitOutlineComponent,
+    DecimalPipe,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
+    RouterLink,
+  ],
   templateUrl: './circuit-detail.component.html',
   styleUrl: './circuit-detail.component.scss',
 })
 export class CircuitDetailComponent {
   private readonly ergast = inject(ErgastService);
+  private readonly circuitId$ = inject(ActivatedRoute).paramMap.pipe(
+    map((params) => params.get('circuitId') ?? ''),
+  );
+
+  protected readonly circuitId = toSignal(this.circuitId$, { initialValue: '' });
 
   protected readonly state = toSignal(
-    inject(ActivatedRoute).paramMap.pipe(
-      map((params) => params.get('circuitId') ?? ''),
+    this.circuitId$.pipe(
       switchMap((id) =>
         this.ergast.getCircuitHistory(id).pipe(
           map(

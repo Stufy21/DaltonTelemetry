@@ -1,0 +1,12 @@
+@if (outline(); as o) {
+  <svg
+    [attr.viewBox]="'0 0 ' + o.width + ' ' + o.height"
+    role="img"
+    [attr.aria-label]="label() || null"
+    [attr.aria-hidden]="label() ? null : 'true'"
+  >
+    <path [attr.d]="o.path" />
+  </svg>
+} @else if (outline() === null) {
+  <mat-icon class="fallback" aria-hidden="true">route</mat-icon>
+}

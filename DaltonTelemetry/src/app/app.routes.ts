@@ -12,15 +12,21 @@ export const routes: Routes = [
     loadComponent: () => import('./settings/settings.component').then((m) => m.SettingsComponent),
   },
   {
-    path: 'reports/stats/:circuitId',
+    path: 'statistics/:circuitId',
     loadComponent: () =>
       import('./dashboards/circuit-detail/circuit-detail.component').then(
         (m) => m.CircuitDetailComponent,
       ),
   },
   {
-    path: 'reports/stats',
+    path: 'statistics',
     loadComponent: () =>
       import('./dashboards/statistics/statistics.component').then((m) => m.StatisticsComponent),
   },
+  // Statistics used to live under Reports: keep those links working.
+  {
+    path: 'reports/stats/:circuitId',
+    redirectTo: ({ params }) => `/statistics/${params['circuitId']}`,
+  },
+  { path: 'reports/stats', redirectTo: '/statistics', pathMatch: 'full' },
 ];
