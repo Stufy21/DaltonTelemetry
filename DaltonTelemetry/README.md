@@ -124,9 +124,32 @@ relay needed), so this also works with the static Cloudflare deployment.
    to the public OpenF1 API for a minute and then tries your server again. That keeps finished
    sessions working; a live session needs your server (the public API refuses it).
 
+   Your server doesn't need to hold every season: when it has nothing for a season or a finished
+   session, the app asks the public API instead and remembers that session as public-only. Live
+   polling (every 5 s against your server) never falls back on an empty answer.
+
+6. **Indexes.** OpenF1 creates none, and on tens of millions of rows its 5 s query limit makes
+   `location`/`car_data` queries fail. Create them once in MongoDB:
+   `location {session_key, date}`, `car_data {session_key, driver_number, date}`,
+   `{session_key, date}` on `position`, `intervals`, `race_control`, `weather`, `team_radio` and
+   `pit`, `{session_key, date_start}` on `laps`, and `{session_key}` on the small collections.
+
+### Importing past seasons
+
+F1's static archive (`livetiming.formula1.com/static`) now answers 401 without the F1 TV token, and
+403 from some datacenter IPs (Oracle's, at least). OpenF1's historical ingestor sends no token, so
+`scripts/openf1/f1-token.patch` (apply with `git apply` in your OpenF1 clone) makes it send
+`F1_TOKEN` and gives each meeting its own `_id` range (`OPENF1_ID_BASE`): without that, importing
+several meetings in a row silently drops rows on duplicate `_id`s. Run the import from a home
+machine, with MongoDB reached through an SSH tunnel, one `ingest-meeting` process per meeting, and
+check the log for `E11000` errors. `node scripts/f1-archive-probe.mjs` shows which feeds the
+archive serves for a session. A whole season took about 2.5 hours and ~5 GB of disk.
+
 The app side is tested against a fake local server (requests go to the configured URL, a live
-session is detected and polled, and with the server down the app falls back to the public API). The OpenF1 containers themselves, the F1 TV token and the HTTPS
-setup have **not** been run from here, so expect some trial and error on the first session.
+session is detected and polled, and with the server down the app falls back to the public API).
+Past sessions served from a real OpenF1 instance (2026 season, over HTTPS with Caddy) have been
+checked in the browser. **Live recording** (the `ingest-realtime` container with an F1 TV token)
+has **not** been run yet, so expect some trial and error on the first live session.
 
 ## Deploying to Cloudflare
 
@@ -143,11 +166,11 @@ npm run deploy:cloudflare    # build + publish
 Or connect the Git repository in the Cloudflare dashboard (Workers & Pages → Create → import a
 repository) with:
 
-| Setting | Value |
-| --- | --- |
-| Root directory | `DaltonTelemetry` |
-| Build command | leave empty (`wrangler deploy` builds the site, see `wrangler.jsonc`) |
-| Deploy command | `npx wrangler deploy` |
+| Setting        | Value                                                                 |
+| -------------- | --------------------------------------------------------------------- |
+| Root directory | `DaltonTelemetry`                                                     |
+| Build command  | leave empty (`wrangler deploy` builds the site, see `wrangler.jsonc`) |
+| Deploy command | `npx wrangler deploy`                                                 |
 
 What this deployment does and does not include:
 
@@ -161,4 +184,3 @@ What this deployment does and does not include:
   configured. `package-lock.json` is git-ignored in this project; commit it (or remove it from
   `.gitignore`) if you want reproducible installs on Cloudflare's build machines.
 - The site is published at https://daltontelemetry.thomas-stufano.workers.dev.
-

@@ -1,0 +1,117 @@
+diff --git a/src/openf1/services/ingestor_livetiming/core/objects.py b/src/openf1/services/ingestor_livetiming/core/objects.py
+index 823a1b9..60309d2 100644
+--- a/src/openf1/services/ingestor_livetiming/core/objects.py
++++ b/src/openf1/services/ingestor_livetiming/core/objects.py
+@@ -5,6 +5,7 @@ cf. https://github.com/br-g/openf1/blob/main/src/openf1/services/ingestor_liveti
+ """
+ 
+ import asyncio
++import os
+ import importlib
+ import inspect
+ import sys
+@@ -18,14 +19,18 @@ from pathlib import Path
+ from typing import Iterator
+ 
+ _id_lock = asyncio.Lock()
+-_last_id = 0
++# Bulk imports run one process per meeting and mint millions of ids, which run far ahead of the
++# clock: the next process would restart at "now" and collide. OPENF1_ID_BASE gives such a run its
++# own id range (ms since epoch, in the past), counted up without looking at the clock.
++_ID_BASE = os.getenv("OPENF1_ID_BASE")
++_last_id = int(_ID_BASE) if _ID_BASE else 0
+ 
+ 
+ def _generate_mongo_id_sync() -> int:
+     """Generates a unique, monotonically increasing ID based on time"""
+     global _last_id
+     time_ms = time.time_ns() // 1_000_000
+-    if time_ms <= _last_id:
++    if _ID_BASE or time_ms <= _last_id:
+         time_ms = _last_id + 1
+     _last_id = time_ms
+     return time_ms
+@@ -36,7 +41,7 @@ async def _generate_mongo_id_async() -> int:
+     global _last_id
+     time_ms = time.time_ns() // 1_000_000
+     async with _id_lock:
+-        if time_ms <= _last_id:
++        if _ID_BASE or time_ms <= _last_id:
+             time_ms = _last_id + 1
+         _last_id = time_ms
+     return time_ms
+diff --git a/src/openf1/services/ingestor_livetiming/historical/main.py b/src/openf1/services/ingestor_livetiming/historical/main.py
+index 68181e4..7bc21e4 100644
+--- a/src/openf1/services/ingestor_livetiming/historical/main.py
++++ b/src/openf1/services/ingestor_livetiming/historical/main.py
+@@ -17,6 +17,7 @@ from openf1.services.ingestor_livetiming.core.objects import (
+ )
+ from openf1.services.ingestor_livetiming.core.processing.main import process_messages
+ from openf1.util.db import insert_data_sync
++from openf1.util.f1_http import f1_get
+ from openf1.util.misc import join_url, json_serializer, to_datetime, to_timedelta
+ from openf1.util.schedule import get_meeting_keys
+ from openf1.util.schedule import get_schedule as _get_schedule
+@@ -68,7 +69,7 @@ def get_session_url(year: int, meeting_key: int, session_key: int) -> str:
+ def _list_topics(session_url: str) -> list[str]:
+     """Returns all the available raw data filenames for the session"""
+     index_url = join_url(session_url, "Index.json")
+-    index_response = requests.get(index_url)
++    index_response = f1_get(index_url)
+     index_content = json.loads(index_response.content)
+ 
+     filenames = [v["StreamPath"] for v in index_content["Feeds"].values()]
+@@ -98,7 +99,7 @@ def list_topics(
+ def _get_topic_content(session_url: str, topic: str) -> list[str]:
+     topic_filename = f"{topic}.jsonStream"
+     url_topic = join_url(session_url, topic_filename)
+-    topic_content = requests.get(url_topic).text.split("\r\n")
++    topic_content = f1_get(url_topic, missing_ok=True).text.split("\r\n")
+     return topic_content
+ 
+ 
+diff --git a/src/openf1/util/f1_http.py b/src/openf1/util/f1_http.py
+new file mode 100644
+index 0000000..396373c
+--- /dev/null
++++ b/src/openf1/util/f1_http.py
+@@ -0,0 +1,18 @@
++import os
++
++import requests
++
++
++def f1_get(url: str, missing_ok: bool = False) -> requests.Response:
++    """GET on F1's live timing archive. The archive now requires the F1 TV subscription
++    token (set the F1_TOKEN environment variable) and rejects anonymous requests."""
++    token = os.getenv("F1_TOKEN")
++    headers = {"Authorization": f"Bearer {token}"} if token else {}
++    response = requests.get(url, headers=headers, timeout=120)
++    # The archive answers 403/404 for a feed a session never had: callers reading feeds can ignore it.
++    if missing_ok and response.status_code in (403, 404):
++        response.status_code = 200
++        response._content = b""
++        return response
++    response.raise_for_status()
++    return response
+diff --git a/src/openf1/util/schedule.py b/src/openf1/util/schedule.py
+index 8fdba00..202d4a8 100644
+--- a/src/openf1/util/schedule.py
++++ b/src/openf1/util/schedule.py
+@@ -4,6 +4,7 @@ from functools import lru_cache
+ import requests
+ 
+ from openf1.util.db import get_latest_session_info
++from openf1.util.f1_http import f1_get
+ from openf1.util.misc import join_url
+ 
+ MISSING_SESSIONS = {
+@@ -230,7 +231,7 @@ def get_schedule(year: int) -> dict:
+     """Fetches the Formula 1 race schedule for a specified year (past sessions only)"""
+     BASE_URL = "https://livetiming.formula1.com/static"
+     url = join_url(BASE_URL, f"{year}/Index.json")
+-    response = requests.get(url)
++    response = f1_get(url)
+     content_json = response.content
+     content_dict = json.loads(content_json)
+ 
