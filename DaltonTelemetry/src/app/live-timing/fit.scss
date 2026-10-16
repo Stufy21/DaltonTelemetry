@@ -1,0 +1,8 @@
+// On a large screen the live timing board is sized to the window (three columns, each widget
+// scrolls inside its own card) so everything is visible without scrolling the page. Smaller
+// screens keep the stacked layout and scroll the page.
+@mixin fit-screen {
+  @media (min-width: 1860px) and (min-height: 760px) {
+    @content;
+  }
+}

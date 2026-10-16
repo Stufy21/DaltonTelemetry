@@ -1,9 +1,11 @@
 export type WidgetId = 'leaderboard' | 'championship' | 'map' | 'telemetry' | 'feed';
-export type ColumnId = 'main' | 'side';
+export type ColumnId = 'main' | 'side' | 'third';
+export const COLUMNS: ColumnId[] = ['main', 'side', 'third'];
 
 export interface Layout {
   main: WidgetId[];
   side: WidgetId[];
+  third: WidgetId[];
   hidden: WidgetId[];
 }
 
@@ -23,11 +25,26 @@ export const WIDGET_ICONS: Record<WidgetId, string> = {
   feed: 'campaign',
 };
 
+/** Three columns on a wide screen: standings | map and telemetry | race control and championship. */
 export const DEFAULT_LAYOUT: Layout = {
   main: ['leaderboard'],
-  side: ['championship', 'map', 'telemetry', 'feed'],
+  side: ['map', 'telemetry'],
+  third: ['feed', 'championship'],
   hidden: [],
 };
+
+export function defaultColumn(id: WidgetId): ColumnId {
+  return COLUMNS.find((column) => DEFAULT_LAYOUT[column].includes(id)) ?? 'side';
+}
+
+export function cloneLayout(layout: Layout): Layout {
+  return {
+    main: [...layout.main],
+    side: [...layout.side],
+    third: [...layout.third],
+    hidden: [...layout.hidden],
+  };
+}
 
 const ALL: WidgetId[] = ['leaderboard', 'championship', 'map', 'telemetry', 'feed'];
 const isWidgetId = (v: unknown): v is WidgetId => ALL.includes(v as WidgetId);
@@ -50,14 +67,18 @@ export function normalizeLayout(raw: unknown): Layout {
     });
 
   const hidden = take(source.hidden);
-  const main = take(source.main);
-  const side = take(source.side);
+  const layout: Layout = {
+    hidden,
+    main: take(source.main),
+    side: take(source.side),
+    third: take(source.third),
+  };
 
   for (const id of ALL) {
     if (seen.has(id)) continue;
-    const column = DEFAULT_LAYOUT.main.includes(id) ? main : side;
-    const defaults = DEFAULT_LAYOUT.main.includes(id) ? DEFAULT_LAYOUT.main : DEFAULT_LAYOUT.side;
-    column.splice(Math.min(defaults.indexOf(id), column.length), 0, id);
+    const column = defaultColumn(id);
+    const defaults = DEFAULT_LAYOUT[column];
+    layout[column].splice(Math.min(defaults.indexOf(id), layout[column].length), 0, id);
   }
-  return { main, side, hidden };
+  return layout;
 }

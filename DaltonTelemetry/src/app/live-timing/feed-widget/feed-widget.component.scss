@@ -1,5 +1,17 @@
+@use '../fit' as *;
+
 :host {
   display: block;
+
+  @include fit-screen {
+    height: 100%;
+  }
+}
+
+mat-tab-group {
+  @include fit-screen {
+    height: 100%;
+  }
 }
 
 /* ── Feeds ─────────────────────────────────── */
@@ -10,6 +22,11 @@
   padding: 0;
   max-height: 420px;
   overflow-y: auto;
+
+  @include fit-screen {
+    max-height: none;
+    overflow-y: visible;
+  }
 
   li {
     display: flex;
