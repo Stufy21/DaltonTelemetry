@@ -1,3 +1,5 @@
+@use '../fit' as *;
+
 :host {
   display: block;
   overflow-x: auto;
@@ -16,6 +18,13 @@
   column-gap: 6px;
   padding: 0 14px;
   height: 40px;
+
+  /* a 1080p screen needs thinner rows to show all 22 cars */
+  @include fit-screen {
+    @media (max-height: 1199px) {
+      height: 28px;
+    }
+  }
   border-bottom: 1px solid var(--dt-border);
   transition: background 120ms ease;
 

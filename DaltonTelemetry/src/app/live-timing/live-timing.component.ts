@@ -20,7 +20,7 @@ import { ChampionshipWidgetComponent } from './championship/championship-widget.
 import { FeedWidgetComponent } from './feed-widget/feed-widget.component';
 import { TelemetryFeedStore } from './telemetry-widget/telemetry-feed.store';
 import { TelemetryWidgetComponent } from './telemetry-widget/telemetry-widget.component';
-import { ColumnId, WIDGET_TITLES, WidgetId } from './widgets/layout';
+import { COLUMNS, WIDGET_TITLES, WidgetId } from './widgets/layout';
 import { LayoutStore } from './widgets/layout.store';
 import { WidgetComponent } from './widgets/widget.component';
 import { LeaderboardComponent } from './leaderboard/leaderboard.component';
@@ -60,7 +60,7 @@ export class LiveTimingComponent {
   protected readonly store = inject(LiveTimingStore);
   protected readonly cmp = inject(ComparisonStore);
   protected readonly layout = inject(LayoutStore);
-  protected readonly columns: ColumnId[] = ['main', 'side'];
+  protected readonly columns = COLUMNS;
   protected readonly titles = WIDGET_TITLES;
   protected readonly widgetIds = Object.keys(WIDGET_TITLES) as WidgetId[];
   protected readonly speeds = PLAYBACK_SPEEDS;

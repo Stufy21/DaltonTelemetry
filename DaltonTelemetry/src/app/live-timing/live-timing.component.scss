@@ -1,13 +1,24 @@
+@use './fit' as *;
+
 :host {
   display: block;
   max-width: 1760px;
   margin: 0 auto;
+
+  @include fit-screen {
+    height: 100%;
+    max-width: none;
+  }
 }
 
 .lt {
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+  @include fit-screen {
+    height: 100%;
+  }
 
   /* room to scroll the last rows above the comparison card */
   &.has-sheet {
@@ -234,11 +245,25 @@
 .board {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 440px;
+  grid-template-areas:
+    'main side'
+    'main third';
   gap: 16px;
   align-items: start;
 
   @media (max-width: 1280px) {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'main' 'side' 'third';
+  }
+
+  /* three columns filling the window: standings | map and telemetry | race control and championship */
+  @include fit-screen {
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: minmax(860px, 1.35fr) minmax(340px, 1fr) minmax(320px, 0.9fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'main side third';
+    align-items: stretch;
   }
 }
 
@@ -248,11 +273,39 @@
   gap: 16px;
   min-width: 0;
   min-height: 64px;
+
+  &[data-column='main'] {
+    grid-area: main;
+  }
+  &[data-column='side'] {
+    grid-area: side;
+  }
+  &[data-column='third'] {
+    grid-area: third;
+  }
+
+  @include fit-screen {
+    min-height: 0;
+
+    /* widgets share the column's height and scroll inside their card */
+    app-widget {
+      flex: 1 1 0;
+      min-height: 0;
+    }
+    app-widget[data-widget='telemetry'] {
+      flex: 0 0 auto;
+    }
+    app-widget[data-widget='map'] {
+      flex-grow: 1.5;
+      min-height: 280px;
+    }
+  }
 }
 
 .drop-hint {
   display: grid;
   place-items: center;
+  flex: 1;
   min-height: 64px;
   border: 2px dashed var(--dt-border);
   border-radius: var(--dt-radius);

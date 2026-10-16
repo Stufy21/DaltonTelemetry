@@ -1,12 +1,22 @@
+@use '../fit' as *;
+
 :host {
   display: block;
   position: relative;
+
+  @include fit-screen {
+    height: 100%;
+  }
 }
 
 svg {
   display: block;
   width: 100%;
   height: 300px;
+
+  @include fit-screen {
+    height: 100%;
+  }
 }
 
 .asphalt {

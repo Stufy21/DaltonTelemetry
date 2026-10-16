@@ -185,13 +185,20 @@
     @for (col of columns; track col) {
       <div
         class="column"
+        [attr.data-column]="col"
         cdkDropList
         [id]="col"
         [cdkDropListData]="col"
         (cdkDropListDropped)="layout.drop($event)"
       >
         @for (id of layout.layout()[col]; track id) {
-          <app-widget cdkDrag [cdkDragData]="id" [title]="titles[id]" (closed)="layout.hide(id)">
+          <app-widget
+            cdkDrag
+            [cdkDragData]="id"
+            [attr.data-widget]="id"
+            [title]="titles[id]"
+            (closed)="layout.hide(id)"
+          >
             @switch (id) {
               @case ('leaderboard') {
                 @if (store.loading()) {

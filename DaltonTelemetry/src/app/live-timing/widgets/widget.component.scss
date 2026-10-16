@@ -1,9 +1,23 @@
+@use '../fit' as *;
+
 :host {
   display: block;
+
+  @include fit-screen {
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .widget {
   overflow: hidden;
+
+  @include fit-screen {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
   background: var(--dt-card);
   border: 1px solid var(--dt-border);
   border-radius: var(--dt-radius);
@@ -47,4 +61,12 @@ h2 {
 
 .spacer {
   flex: 1;
+}
+
+.body {
+  @include fit-screen {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
 }
