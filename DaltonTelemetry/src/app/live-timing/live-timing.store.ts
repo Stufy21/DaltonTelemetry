@@ -1,16 +1,14 @@
 import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
 import { forkJoin, of, Subscription } from 'rxjs';
+import { OpenF1Config } from '../core/openf1/openf1-config';
 import { OpenF1Service } from '../core/openf1/openf1.service';
 import { LiveEvent, LiveFeedService } from '../core/openf1/live-feed.service';
 import { OF1Session, OF1Stint } from '../core/openf1/openf1.model';
 import { applyLiveBatch, stintKey } from './live-ingest';
+import { pollCadence } from './polling';
 import { LapSummary, Point, TimingDataset } from './timing-dataset';
 
 const TICK_MS = 250;
-
-/** Polling cadences. Together they use ~20 of the 30 requests/minute OpenF1 allows. */
-const FAST_POLL_MS = 15_000; // positions, intervals, laps, location
-const SLOW_POLL_MS = 60_000; // race control, weather, pits, stints (+ radio when opened)
 
 /** A session is considered live from shortly before it starts to a while after the scheduled end. */
 const LIVE_WINDOW_BEFORE_MS = 15 * 60_000;
@@ -23,9 +21,6 @@ const LOCATION_DEBOUNCE_MS = 500;
 const LOCATION_RETRY_MS = 15_000;
 /** Above this replay speed, windows would be consumed faster than the API budget allows. */
 export const MAX_MAP_SPEED = 10;
-/** While following live, the map trails the clock by one fast poll so cars move smoothly. */
-const LIVE_MAP_LAG_MS = FAST_POLL_MS;
-
 /** Everything the page needs live except `car_data`, which only the telemetry widget wants. */
 const STREAM_TOPICS = [
   'v1/position',
@@ -57,6 +52,8 @@ const lastDate = (rows: { date: string }[], fallback?: string): string | undefin
 @Injectable()
 export class LiveTimingStore {
   private api = inject(OpenF1Service);
+  /** Polling cadence for the server in use (see polling.ts). */
+  private readonly cadence = pollCadence(inject(OpenF1Config).selfHosted);
   private feed = inject(LiveFeedService);
   private destroyRef = inject(DestroyRef);
 
@@ -120,7 +117,9 @@ export class LiveTimingStore {
    * jumping on the 250 ms tick. Everything else keeps using `now`.
    */
   readonly smoothNow = signal(0);
-  readonly mapTime = computed(() => this.smoothNow() - (this.following() ? LIVE_MAP_LAG_MS : 0));
+  readonly mapTime = computed(
+    () => this.smoothNow() - (this.following() ? this.cadence.mapLag : 0),
+  );
   /** Whole seconds of mapTime: a stable trigger for loading data without reacting to every frame. */
   readonly mapSecond = computed(() => Math.floor(this.mapTime() / 1000));
 
@@ -282,7 +281,7 @@ export class LiveTimingStore {
           raceControl: lastDate(d.raceControl),
           weather: lastDate(d.weather),
           pits: lastDate(d.pits),
-          location: new Date(t - LIVE_MAP_LAG_MS * 2).toISOString(),
+          location: new Date(t - this.cadence.mapLag * 2).toISOString(),
         };
 
         this.sessionLive.set(live);
@@ -509,12 +508,12 @@ export class LiveTimingStore {
           this.liveError.set(null);
           this.version.update((v) => v + 1);
           this.loadOutline(generation, false);
-          schedule(fast, FAST_POLL_MS);
+          schedule(fast, this.cadence.fast);
         },
         error: (err) => {
           this.pollSubs.delete(sub);
           this.liveError.set(this.describe(err, 'Live feed interrupted, retrying…'));
-          schedule(fast, FAST_POLL_MS);
+          schedule(fast, this.cadence.fast);
         },
       });
       this.pollSubs.add(sub);
@@ -543,11 +542,11 @@ export class LiveTimingStore {
           this.cursors.pits = lastDate(d.pits, c.pits);
           this.cursors.radio = lastDate(d.radio, c.radio);
           this.version.update((v) => v + 1);
-          schedule(slow, SLOW_POLL_MS);
+          schedule(slow, this.cadence.slow);
         },
         error: () => {
           this.pollSubs.delete(sub);
-          schedule(slow, SLOW_POLL_MS);
+          schedule(slow, this.cadence.slow);
         },
       });
       this.pollSubs.add(sub);
@@ -555,7 +554,7 @@ export class LiveTimingStore {
 
     fast();
     // Offset the slow loop so both groups don't hit the limiter in the same instant.
-    schedule(slow, SLOW_POLL_MS);
+    schedule(slow, this.cadence.slow);
   }
 
   /* ── Live stream (server relay) ─────────────────── */
