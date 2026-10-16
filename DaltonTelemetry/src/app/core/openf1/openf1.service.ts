@@ -54,6 +54,8 @@ export class OpenF1Service {
   private viaRelay = false;
   /** Tracks the self-hosted server (when configured) so a dead one doesn't stall every request. */
   private readonly selfHostedHealth = new ServerHealth();
+  /** Sessions the self-hosted server turned out not to have: all their requests go to the public API. */
+  private readonly publicOnlySessions = new Set<number>();
 
   /**
    * Route requests through the server's authenticated proxy instead of calling OpenF1 directly.
@@ -65,7 +67,8 @@ export class OpenF1Service {
   }
 
   getSessions(year: number): Observable<OF1Session[]> {
-    return this.get<OF1Session>('sessions', { year });
+    // The self-hosted server only holds some seasons: an empty answer means "ask the public API".
+    return this.get<OF1Session>('sessions', { year }, false, true);
   }
 
   /**
@@ -136,7 +139,7 @@ export class OpenF1Service {
     const params: Params = { session_key: sessionKey, 'date>=': from };
     if (to) params['date<'] = to;
     if (driver != null) params['driver_number'] = driver;
-    return this.get<OF1Location>('location', params, cache);
+    return this.get<OF1Location>('location', params, cache, false);
   }
 
   /** Car telemetry (speed, throttle, brake, gear, rpm) of one driver in [from, to). */
@@ -151,6 +154,7 @@ export class OpenF1Service {
       'car_data',
       { session_key: sessionKey, driver_number: driver, 'date>=': from, 'date<': to },
       cache,
+      false,
     );
   }
 
@@ -165,7 +169,18 @@ export class OpenF1Service {
     return params;
   }
 
-  private get<T>(endpoint: string, params: Params, cache = false): Observable<T[]> {
+  /**
+   * `emptyMeansElsewhere`: an empty self-hosted answer is retried on the public API, because the
+   * server only holds some sessions, and that session is remembered as public-only. Defaults to on
+   * for finished sessions (`cache`), whose data never arrives later; it is off for live polling
+   * ("no new rows yet" is a normal answer) and for time windows (they are often legitimately empty).
+   */
+  private get<T>(
+    endpoint: string,
+    params: Params,
+    cache = false,
+    emptyMeansElsewhere = cache,
+  ): Observable<T[]> {
     const path = `${endpoint}?${toQuery(params)}`;
     if (this.viaRelay) return this.request<T>(`${RELAY_URL}/${path}`, true, cache);
 
@@ -174,14 +189,26 @@ export class OpenF1Service {
 
     // Prefer the self-hosted server, but fall back to the public API while it is unreachable
     // (that serves finished sessions; live ones need the self-hosted server).
+    const sessionKey = typeof params['session_key'] === 'number' ? params['session_key'] : null;
     if (this.selfHostedHealth.isDown()) return publicRequest();
+    if (sessionKey !== null && this.publicOnlySessions.has(sessionKey)) return publicRequest();
     return this.request<T>(`${this.config.baseUrl}/${path}`, true, cache, SERVER_TIMEOUT_MS).pipe(
       tap(() => this.selfHostedHealth.markUp()),
+      // null = the server is unreachable (as opposed to answering with an error about the query)
       catchError((err) => {
         if (!isServerUnavailable(err)) return throwError(() => err);
         console.warn('Self-hosted OpenF1 server unavailable, using the public API for a while.');
         this.selfHostedHealth.markDown();
-        return publicRequest();
+        return of(null);
+      }),
+      switchMap((rows) => {
+        if (rows === null) return publicRequest();
+        if (rows.length > 0 || !emptyMeansElsewhere) return of(rows);
+        return publicRequest().pipe(
+          tap((found) => {
+            if (found.length > 0 && sessionKey !== null) this.publicOnlySessions.add(sessionKey);
+          }),
+        );
       }),
     );
   }
