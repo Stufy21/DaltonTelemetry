@@ -380,7 +380,7 @@ export class TimingDataset {
         ? [rec.lap.duration_sector_1, rec.lap.duration_sector_2, rec.lap.duration_sector_3]
         : [null, null, null];
       const sectors = sectorTimes.map((time, i) =>
-        sectorView(time, overall[i + 1], rec?.best[i + 1] ?? null),
+        sectorView(time, overall[i + 1], finiteOrNull(rec?.best[i + 1])),
       ) as TimingRow['sectors'];
 
       const stint = this.stintAt(id, Math.max(1, currentLap));
@@ -397,8 +397,8 @@ export class TimingDataset {
         gap: interval ? formatGap(interval.gap_to_leader) : '—',
         interval: interval ? formatGap(interval.interval) : '—',
         lastLap,
-        lastLapTone: sectorView(lastLap, overall[0], rec?.best[0] ?? null).tone,
-        bestLap: rec?.best[0] ?? null,
+        lastLapTone: sectorView(lastLap, overall[0], finiteOrNull(rec?.best[0])).tone,
+        bestLap: finiteOrNull(rec?.best[0]),
         sectors,
         compound: stint?.compound ?? null,
         tyreAge: stint
@@ -493,6 +493,14 @@ export class TimingDataset {
     this.lapsDirty = false;
     return this.lapTracks;
   }
+}
+
+/**
+ * Running bests start at Infinity until a lap has a valid time (an out-lap, for instance, has
+ * none), and Infinity must not reach the screen or the gap arithmetic.
+ */
+function finiteOrNull(value: number | undefined): number | null {
+  return value != null && Number.isFinite(value) ? value : null;
 }
 
 function sectorView(

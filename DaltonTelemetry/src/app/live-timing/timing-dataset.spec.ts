@@ -98,6 +98,20 @@ describe('TimingDataset', () => {
     expect(b.bestLap).toBe(99);
   });
 
+  it('shows no best lap until a lap has a time, instead of Infinity', () => {
+    const ds = build();
+    ds.setDrivers([driver(1, 'AAA'), driver(2, 'BBB'), driver(3, 'CCC')]);
+    // an out-lap has sector times but no lap time, then the next lap starts
+    ds.mergeLaps([
+      { ...lap(3, 1, 0, 0, [0, 46.161, 39.62]), lap_duration: null, duration_sector_1: null },
+      { ...lap(3, 2, 100, 0, [0, 0, 0]), lap_duration: null, duration_sector_2: null },
+    ]);
+    const c = ds.rows(T0 + 120_000).find((r) => r.acronym === 'CCC')!;
+    expect(c.bestLap).toBeNull();
+    expect(c.sectors[1].time).toBe(46.161);
+    expect(['yellow', 'green', 'purple']).toContain(c.sectors[1].tone);
+  });
+
   it('derives tyre compound and age from the stint covering the current lap', () => {
     const ds = build();
     const first = ds.rows(T0 + 10_000).find((r) => r.acronym === 'AAA')!;
