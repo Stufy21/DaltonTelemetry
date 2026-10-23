@@ -60,7 +60,14 @@
     <div class="stats">
       @if (store.sessionLive()) {
         <span class="badge live"
-          ><span class="dot"></span>{{ store.following() ? 'LIVE' : 'LIVE · behind' }}</span
+          ><span class="dot"></span
+          >{{
+            store.following()
+              ? store.delay()
+                ? 'LIVE · −' + store.delay() + 's'
+                : 'LIVE'
+              : 'LIVE · behind'
+          }}</span
         >
       } @else if (store.session()) {
         <span class="badge replay">REPLAY</span>
@@ -169,6 +176,28 @@
           />
         }
       </div>
+
+      @if (store.sessionLive()) {
+        <mat-form-field
+          appearance="outline"
+          subscriptSizing="dynamic"
+          class="picker delay"
+          matTooltip="Delay the live view to match your TV and avoid spoilers"
+        >
+          <mat-label>Delay</mat-label>
+          <input
+            matInput
+            type="number"
+            min="0"
+            max="600"
+            step="1"
+            inputmode="numeric"
+            [value]="store.delay()"
+            (change)="onDelay($event)"
+          />
+          <span matTextSuffix>s</span>
+        </mat-form-field>
+      }
 
       <mat-form-field appearance="outline" subscriptSizing="dynamic" class="picker speed">
         <mat-label>Speed</mat-label>

@@ -3,6 +3,7 @@ import { CdkDrag, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { DecimalPipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -38,6 +39,7 @@ import { LiveTimingStore, PLAYBACK_SPEEDS } from './live-timing.store';
     MatFormFieldModule,
     MatDividerModule,
     MatIconModule,
+    MatInputModule,
     MatMenuModule,
     MatProgressSpinnerModule,
     MatSelectModule,
@@ -90,6 +92,12 @@ export class LiveTimingComponent {
 
   protected onSeek(event: Event): void {
     this.store.seek(Number((event.target as HTMLInputElement).value));
+  }
+
+  protected onDelay(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.store.setDelay(Number(input.value));
+    input.value = String(this.store.delay()); // show the value actually applied
   }
 
   protected windDirection(deg: number): string {
