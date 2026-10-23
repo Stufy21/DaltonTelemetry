@@ -539,11 +539,12 @@ export class TimingDataset {
       ordered.forEach((lap, i) => {
         const start = toMs(lap.date_start as string);
         const next = ordered[i + 1]?.date_start;
-        const end = lap.lap_duration
-          ? start + lap.lap_duration * 1000
-          : next
-            ? toMs(next)
-            : Infinity;
+        // An out-lap's duration includes the wait before it (706 s for a lap that started 2 minutes
+        // before the next one), so `start + duration` can land after later laps have finished.
+        // A lap never ends after the next one starts, and an out-lap with no successor yet is
+        // still open: its next lap starts as it ends.
+        const timed = lap.lap_duration ? start + lap.lap_duration * 1000 : Infinity;
+        const end = next ? Math.min(timed, toMs(next)) : lap.is_pit_out_lap ? Infinity : timed;
         records.push({ lap, start, end });
       });
       this.lapTracks.set(driver, records);
@@ -578,6 +579,14 @@ export function formatGap(gap: OF1Gap): string {
   return `+${gap.toFixed(3)}`;
 }
 
+/**
+ * Gap between two best laps. The ranking comes from the feed and the times from the laps, so for a
+ * moment a car can be ranked behind one it has already beaten: that shows as unknown, not "+-0.3".
+ */
+function gapFromBests(own: number | null, other: number | null): string {
+  return own != null && other != null && own >= other ? formatGap(own - other) : '—';
+}
+
 /** Practice/qualifying have no interval feed, so rank gaps come from best laps instead. */
 function fillGapsFromBestLaps(rows: TimingRow[]): void {
   const leaderBest = rows[0]?.bestLap ?? null;
@@ -588,8 +597,8 @@ function fillGapsFromBestLaps(rows: TimingRow[]): void {
       row.interval = '—';
       return;
     }
-    row.gap = row.bestLap != null && leaderBest != null ? formatGap(row.bestLap - leaderBest) : '—';
-    row.interval = row.bestLap != null && ahead != null ? formatGap(row.bestLap - ahead) : '—';
+    row.gap = gapFromBests(row.bestLap, leaderBest);
+    row.interval = gapFromBests(row.bestLap, ahead);
   });
 }
 
