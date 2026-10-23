@@ -125,6 +125,44 @@ describe('TimingDataset', () => {
     expect(later.bestLap).toBe(99);
   });
 
+  it('keeps showing laps that follow an out-lap whose duration includes the wait before it', () => {
+    const ds = new TimingDataset();
+    ds.setDrivers([driver(3, 'CCC')]);
+    ds.addPositions([{ date: iso(0), driver_number: 3, position: 1 }]);
+    // lap 3 is an out-lap that left the pits at 200 s but is "700 s long", although lap 4 starts
+    // at 300 s: its end must not be taken as 900 s, or laps 4 and 5 stay invisible until then
+    ds.mergeLaps([
+      lap(3, 1, 0, 100, [30, 40, 30]),
+      lap(3, 2, 100, 90, [29, 32, 29]),
+      { ...lap(3, 3, 200, 700, [0, 40, 30]), is_pit_out_lap: true },
+      lap(3, 4, 300, 85, [28, 29, 28]),
+      lap(3, 5, 385, 99, [30, 40, 29]),
+    ]);
+    const at = (s: number) => ds.rows(T0 + s * 1000).find((r) => r.acronym === 'CCC')!;
+    expect(at(250).lastLap).toBe(90); // lap 3 is still running
+    expect(at(310).lastLap).toBeNull(); // lap 3 is over, but an out-lap has no lap time
+    expect(at(450).lastLap).toBe(85);
+    expect(at(450).bestLap).toBe(85);
+    expect(at(500).lastLap).toBe(99);
+    expect(at(500).bestLap).toBe(85);
+  });
+
+  it('shows an unknown gap instead of a negative one when the ranking lags the lap times', () => {
+    const ds = new TimingDataset();
+    ds.setDrivers([driver(1, 'AAA'), driver(2, 'BBB')]);
+    // the feed still ranks BBB behind AAA although BBB's best lap is already faster
+    ds.addPositions([
+      { date: iso(0), driver_number: 1, position: 1 },
+      { date: iso(0), driver_number: 2, position: 2 },
+    ]);
+    ds.mergeLaps([lap(1, 1, 0, 100, [30, 40, 30]), lap(2, 1, 0, 99, [30, 40, 29])]);
+    const rows = ds.rows(T0 + 150_000);
+    expect(rows.map((r) => [r.acronym, r.gap, r.interval])).toEqual([
+      ['AAA', 'Leader', '—'],
+      ['BBB', '—', '—'],
+    ]);
+  });
+
   it('ignores a lap once the stewards have deleted it', () => {
     const ds = build();
     // BBB's 99 s lap ends at 200 s; the deletion is announced at 210 s
