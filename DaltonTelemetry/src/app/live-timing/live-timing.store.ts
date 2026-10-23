@@ -1,9 +1,19 @@
-import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import {
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  Injectable,
+  PLATFORM_ID,
+  signal,
+} from '@angular/core';
 import { forkJoin, of, Subscription } from 'rxjs';
 import { OpenF1Config } from '../core/openf1/openf1-config';
 import { OpenF1Service } from '../core/openf1/openf1.service';
 import { LiveEvent, LiveFeedService } from '../core/openf1/live-feed.service';
 import { OF1Session, OF1Stint } from '../core/openf1/openf1.model';
+import { clampDelay, DELAY_STORAGE_KEY, readStoredDelay } from './delay';
 import { applyLiveBatch, stintKey } from './live-ingest';
 import { pollCadence } from './polling';
 import { LapSummary, Point, TimingDataset } from './timing-dataset';
@@ -56,6 +66,7 @@ export class LiveTimingStore {
   private readonly cadence = pollCadence(inject(OpenF1Config).selfHosted);
   private feed = inject(LiveFeedService);
   private destroyRef = inject(DestroyRef);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   private dataset = new TimingDataset();
   private version = signal(0);
@@ -100,6 +111,14 @@ export class LiveTimingStore {
   readonly speed = signal<number>(1);
   readonly now = signal(0);
 
+  /**
+   * How far the live view runs behind real time, in seconds, so it can be lined up with a TV
+   * broadcast (and spoilers avoided). Saved in the browser.
+   */
+  readonly delay = signal(readStoredDelay(this.isBrowser ? localStorage : null));
+  /** The most recent moment the live view may show: real time minus the delay. */
+  readonly liveEdge = signal(0);
+
   readonly rangeStart = computed(() => Date.parse(this.session()?.date_start ?? '') || 0);
   readonly rangeEnd = computed(() => {
     const end = Date.parse(this.session()?.date_end ?? '') || 0;
@@ -127,8 +146,14 @@ export class LiveTimingStore {
   readonly rows = computed(() => (this.version(), this.dataset.rows(this.now())));
   /** The session's drivers by number (a copy, so dependents notice when they are (re)loaded). */
   readonly driversByNumber = computed(() => (this.version(), new Map(this.dataset.drivers)));
+  /** In a live session, flags are only drawn up to the live edge, so the strip can't spoil. */
   readonly flagSegments = computed(
-    () => (this.version(), this.dataset.flagSegments(this.rangeEnd())),
+    () => (
+      this.version(),
+      this.dataset.flagSegments(
+        this.sessionLive() ? Math.min(this.rangeEnd(), this.liveEdge()) : this.rangeEnd(),
+      )
+    ),
   );
   readonly cars = computed(() => (this.version(), this.dataset.cars(this.mapTime())));
   readonly trackStatus = computed(() => (this.version(), this.dataset.trackStatus(this.now())));
@@ -286,7 +311,8 @@ export class LiveTimingStore {
 
         this.sessionLive.set(live);
         this.following.set(live);
-        this.setNow(live ? t : Date.parse(session.date_end));
+        this.liveEdge.set(t - this.delay() * 1000);
+        this.setNow(live ? this.liveEdge() : Date.parse(session.date_end));
         this.loading.set(false);
         this.version.update((v) => v + 1);
         this.loadOutline(generation, cache);
@@ -330,7 +356,9 @@ export class LiveTimingStore {
 
   seek(t: number): void {
     this.following.set(false);
-    this.setNow(Math.min(Math.max(t, this.rangeStart()), this.rangeEnd()));
+    // a live session can't be scrubbed past the live edge, which would show what hasn't aired yet
+    const end = this.sessionLive() ? Math.min(this.rangeEnd(), this.liveEdge()) : this.rangeEnd();
+    this.setNow(Math.min(Math.max(t, this.rangeStart()), end));
   }
 
   jumpToStart(): void {
@@ -345,7 +373,23 @@ export class LiveTimingStore {
   goLive(): void {
     this.playing.set(false);
     this.following.set(true);
-    this.setNow(Date.now());
+    this.liveEdge.set(Date.now() - this.delay() * 1000);
+    this.setNow(this.liveEdge());
+  }
+
+  /** Runs the live view `seconds` behind real time (0 to 600). */
+  setDelay(seconds: number): void {
+    const delay = clampDelay(seconds);
+    this.delay.set(delay);
+    if (this.isBrowser) {
+      try {
+        localStorage.setItem(DELAY_STORAGE_KEY, String(delay));
+      } catch {
+        // storage unavailable: the delay just won't be remembered
+      }
+    }
+    this.liveEdge.set(Date.now() - delay * 1000);
+    if (this.following()) this.setNow(this.liveEdge());
   }
 
   /** Sets the clock and re-anchors the render clock, so interpolation continues from here. */
@@ -358,9 +402,11 @@ export class LiveTimingStore {
     const t = Date.now();
     const dt = this.lastTick ? t - this.lastTick : 0;
     this.lastTick = t;
+    const edge = t - this.delay() * 1000;
+    this.liveEdge.set(edge);
 
     if (this.following()) {
-      this.setNow(t);
+      this.setNow(edge);
     } else if (this.playing()) {
       const next = this.now() + dt * this.speed();
       if (next >= this.rangeEnd()) {
@@ -372,7 +418,12 @@ export class LiveTimingStore {
     }
 
     const session = this.session();
-    if (this.sessionLive() && session && t > Date.parse(session.date_end) + LIVE_WINDOW_AFTER_MS) {
+    // the delayed view still has to play out the end of the session before live mode stops
+    if (
+      this.sessionLive() &&
+      session &&
+      edge > Date.parse(session.date_end) + LIVE_WINDOW_AFTER_MS
+    ) {
       this.sessionLive.set(false);
       this.following.set(false);
       this.stopPolling();
