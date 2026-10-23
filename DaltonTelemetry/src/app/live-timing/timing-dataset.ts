@@ -12,6 +12,7 @@ import {
   OF1Weather,
 } from '../core/openf1/openf1.model';
 import { TimedSeries, upperBound } from './timed-series';
+import { withDistinctColour } from './team-colours';
 
 export type SectorTone = 'purple' | 'green' | 'yellow' | 'none';
 export type TrackStatusTone = 'green' | 'yellow' | 'red' | 'sc' | 'vsc' | 'chequered' | 'none';
@@ -133,7 +134,7 @@ export class TimingDataset {
 
   setDrivers(rows: OF1Driver[]): void {
     this.drivers.clear();
-    for (const d of rows) this.drivers.set(d.driver_number, d);
+    for (const d of rows) this.drivers.set(d.driver_number, withDistinctColour(d));
   }
 
   addPositions(rows: OF1Position[]): void {
