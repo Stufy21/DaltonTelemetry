@@ -112,6 +112,40 @@ describe('TimingDataset', () => {
     expect(['yellow', 'green', 'purple']).toContain(c.sectors[1].tone);
   });
 
+  it('does not count an out-lap as a lap time, however long the wait in the garage was', () => {
+    const ds = build();
+    ds.mergeLaps([{ ...lap(2, 0, -460, 459.188, [0, 52, 41]), is_pit_out_lap: true }]);
+    // the out-lap ends 0.8 s before T0, so it is the last completed lap here
+    const early = ds.rows(T0 - 500).find((r) => r.acronym === 'BBB')!;
+    expect(early.lastLap).toBeNull();
+    expect(early.bestLap).toBeNull();
+    // later laps keep their own times, and the out-lap never becomes the best
+    const later = ds.rows(T0 + 250_000).find((r) => r.acronym === 'BBB')!;
+    expect(later.lastLap).toBe(99);
+    expect(later.bestLap).toBe(99);
+  });
+
+  it('ignores a lap once the stewards have deleted it', () => {
+    const ds = build();
+    // BBB's 99 s lap ends at 200 s; the deletion is announced at 210 s
+    ds.addRaceControl([
+      {
+        date: iso(210),
+        driver_number: 2,
+        lap_number: 2,
+        category: 'Other',
+        flag: null,
+        scope: null,
+        sector: null,
+        message: 'CAR 2 (BBB) TIME 1:39.000 DELETED - TRACK LIMITS AT TURN 9 LAP 2 12:00:00',
+      },
+    ]);
+    const before = ds.rows(T0 + 205_000).find((r) => r.acronym === 'BBB')!;
+    expect(before.bestLap).toBe(99);
+    const after = ds.rows(T0 + 215_000).find((r) => r.acronym === 'BBB')!;
+    expect(after.bestLap).toBe(101);
+  });
+
   it('derives tyre compound and age from the stint covering the current lap', () => {
     const ds = build();
     const first = ds.rows(T0 + 10_000).find((r) => r.acronym === 'AAA')!;
@@ -140,14 +174,39 @@ describe('TimingDataset', () => {
     ]);
   });
 
-  it('flags a pit stop for the duration of the pit lane time', () => {
+  it('flags a pit stop during the pit lane time that ends at the stop record', () => {
     const ds = build();
+    // the record is dated when the car leaves the pit lane, after 20 s in it
     ds.addPits([{ date: iso(60), driver_number: 1, lap_number: 1, pit_duration: 20 }]);
     const at = (s: number) => ds.rows(T0 + s * 1000).find((r) => r.acronym === 'AAA')!;
-    expect(at(50).inPit).toBe(false);
-    expect(at(70).inPit).toBe(true);
-    expect(at(70).pitStops).toBe(1);
-    expect(at(100).inPit).toBe(false);
+    expect(at(30).inPit).toBe(false);
+    expect(at(50).inPit).toBe(true);
+    expect(at(59).inPit).toBe(true);
+    expect(at(61).inPit).toBe(false);
+    expect(at(61).pitStops).toBe(1);
+  });
+
+  it('sees a car in the pits from its laps alone, as the stop record only comes once it left', () => {
+    const ds = new TimingDataset();
+    ds.setDrivers([driver(3, 'CCC')]);
+    // lap 1 ends at 100 s, the out-lap only starts at 130 s: 30 s in the pit lane
+    ds.mergeLaps([
+      lap(3, 1, 0, 100, [30, 40, 30]),
+      { ...lap(3, 2, 130, 0, [0, 0, 0]), lap_duration: null, is_pit_out_lap: true },
+    ]);
+    const at = (s: number) => ds.rows(T0 + s * 1000).find((r) => r.acronym === 'CCC')!;
+    expect(at(99).inPit).toBe(false);
+    expect(at(115).inPit).toBe(true);
+    expect(at(131).inPit).toBe(false);
+  });
+
+  it('does not call a car in the pits just because its next lap has not arrived yet', () => {
+    const ds = new TimingDataset();
+    ds.setDrivers([driver(3, 'CCC')]);
+    ds.mergeLaps([lap(3, 1, 0, 100, [30, 40, 30])]);
+    const at = (s: number) => ds.rows(T0 + s * 1000).find((r) => r.acronym === 'CCC')!;
+    expect(at(105).inPit).toBe(false); // the live feed may still be delivering lap 2
+    expect(at(115).inPit).toBe(true);
   });
 
   it('derives the track status from the latest relevant race control message', () => {
@@ -312,8 +371,8 @@ describe('TimingDataset live updates', () => {
     ds.addPits([{ date: iso(60), driver_number: 1, lap_number: 1, pit_duration: 20 }]);
     const row = (s: number) => ds.rows(T0 + s * 1000).find((r) => r.acronym === 'AAA')!;
     expect(row(70).pitStops).toBe(1);
-    expect(row(70).inPit).toBe(true);
-    expect(row(100).inPit).toBe(false); // 20 s pit lane + margin has passed
+    expect(row(50).inPit).toBe(true); // in the lane from 40 s until the record at 60 s
+    expect(row(70).inPit).toBe(false);
   });
 
   it('ignores race control messages and radio clips it already has', () => {
