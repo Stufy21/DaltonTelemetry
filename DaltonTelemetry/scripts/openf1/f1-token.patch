@@ -70,6 +70,65 @@ index 68181e4..7bc21e4 100644
      return topic_content
  
  
+diff --git a/src/openf1/services/ingestor_livetiming/real_time/processing.py b/src/openf1/services/ingestor_livetiming/real_time/processing.py
+index 9c14888..1c9d14d 100644
+--- a/src/openf1/services/ingestor_livetiming/real_time/processing.py
++++ b/src/openf1/services/ingestor_livetiming/real_time/processing.py
+@@ -1,6 +1,7 @@
+ import asyncio
+ import json
+ import os
++from datetime import timedelta
+ 
+ from loguru import logger
+ 
+@@ -13,6 +14,12 @@ from openf1.util.mqtt import initialize_mqtt
+ 
+ NETWORK_TIMEOUT = 10.0  # 10 seconds
+ 
++# When it connects, the feed first sends the last state it had, with timestamps from the previous
++# session (days old). Such car data and positions would be stored under the new session, so samples
++# dated much earlier than the message that carries them are dropped.
++STALE_AFTER = timedelta(hours=1)
++_STALE_COLLECTIONS = {"car_data", "location"}
++
+ if "OPENF1_MQTT_URL" in os.environ:
+     from openf1.util.mqtt import publish_messages_to_mqtt
+ 
+@@ -78,6 +85,23 @@ def _process_message(message: Message) -> dict[str, list[Document]] | None:
+     return docs_by_collection
+ 
+ 
++def _drop_stale(collection: str, docs: list[Document], timepoint) -> list[Document]:
++    """Removes samples of a high-rate collection dated long before the message they came in"""
++    if collection not in _STALE_COLLECTIONS:
++        return docs
++    if getattr(timepoint, "tzinfo", None) is not None:
++        timepoint = timepoint.replace(tzinfo=None)
++    kept = []
++    for doc in docs:
++        date = getattr(doc, "date", None)
++        if date is not None and date.tzinfo is not None:
++            date = date.replace(tzinfo=None)
++        if date is not None and timepoint - date > STALE_AFTER:
++            continue
++        kept.append(doc)
++    return kept
++
++
+ async def ingest_line(line: str):
+     """Asynchronously ingests a single line of raw data"""
+     message = _parse_message(line)
+@@ -85,6 +109,9 @@ async def ingest_line(line: str):
+     if docs_by_collection is None:
+         return
+     for collection, docs in docs_by_collection.items():
++        docs = _drop_stale(collection, docs, message.timepoint)
++        if not docs:
++            continue
+         docs_mongo = [await d.to_mongo_doc_async() for d in docs]
+         if "OPENF1_MQTT_URL" in os.environ:
+             docs_mongo_json = [
 diff --git a/src/openf1/util/f1_http.py b/src/openf1/util/f1_http.py
 new file mode 100644
 index 0000000..396373c

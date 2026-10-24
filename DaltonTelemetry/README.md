@@ -145,6 +145,12 @@ machine, with MongoDB reached through an SSH tunnel, one `ingest-meeting` proces
 check the log for `E11000` errors. `node scripts/f1-archive-probe.mjs` shows which feeds the
 archive serves for a session. A whole season took about 2.5 hours and ~5 GB of disk.
 
+The same patch also keeps the live recorder from storing stale samples: on connecting, the feed first
+sends its last state with timestamps from the previous session, which would end up as `car_data` and
+`location` rows dated days before the session. Samples more than an hour older than the message that
+carries them are dropped (restart the recorder to pick the change up). The live recorder is not run
+on the VM: F1 blocks Oracle's addresses, so it runs from a home machine writing through the tunnel.
+
 The app side is tested against a fake local server (requests go to the configured URL, a live
 session is detected and polled, and with the server down the app falls back to the public API).
 Past sessions served from a real OpenF1 instance (2026 season, over HTTPS with Caddy) have been
