@@ -1,0 +1,32 @@
+<svg
+  [attr.viewBox]="viewBox()"
+  preserveAspectRatio="xMidYMid meet"
+  role="img"
+  aria-label="Position on the circuit"
+>
+  <path class="asphalt" [attr.d]="track()" [attr.stroke-width]="unit() * 0.035" />
+  @if (highlight()) {
+    <path class="highlight" [attr.d]="highlight()" [attr.stroke-width]="unit() * 0.035" />
+  }
+  @if (start(); as s) {
+    <circle class="start" [attr.cx]="s.x" [attr.cy]="s.y" [attr.r]="unit() * 0.03" />
+  }
+  @if (cursor(); as c) {
+    <circle
+      class="cursor"
+      [attr.cx]="c.x"
+      [attr.cy]="c.y"
+      [attr.r]="unit() * 0.04"
+      [attr.stroke-width]="unit() * 0.01"
+    />
+  }
+</svg>
+<p class="legend">
+  <span class="swatch start"></span>Start/finish
+  @if (cursor()) {
+    <span class="swatch cursor"></span>Cursor
+  }
+  @if (highlight()) {
+    <span class="swatch highlight"></span>Zoomed stretch
+  }
+</p>
