@@ -13,8 +13,19 @@
   </span>
 </div>
 
-<div class="plot" (pointermove)="onMove($event)" (pointerleave)="hoverChange.emit(null)">
-  <svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
+<div
+  class="plot"
+  [class.selecting]="anchor() !== null"
+  (pointermove)="onMove($event)"
+  (pointerleave)="hoverChange.emit(null)"
+  (click)="onClick($event)"
+>
+  <svg
+    viewBox="0 0 1000 100"
+    preserveAspectRatio="none"
+    aria-hidden="true"
+    [class.zoomed]="zoom() !== null"
+  >
     <line class="grid" x1="0" y1="0" x2="1000" y2="0" />
     <line class="grid" x1="0" y1="50" x2="1000" y2="50" />
     <line class="grid" x1="0" y1="100" x2="1000" y2="100" />
@@ -27,8 +38,17 @@
       />
     }
   </svg>
+  @if (selection(); as s) {
+    <span class="selection" [style.left.%]="s.left" [style.width.%]="s.width"></span>
+  }
+  @if (anchorAt(); as a) {
+    <span class="anchor" [style.left.%]="a * 100"></span>
+  }
   <span class="scale top">{{ top() }}</span>
-  @if (hover(); as f) {
-    <span class="cursor" [style.left.%]="f * 100"></span>
+  @if (zoom() !== null) {
+    <span class="scale bottom">{{ bottom() }}</span>
+  }
+  @if (cursor(); as c) {
+    <span class="cursor" [style.left.%]="c * 100"></span>
   }
 </div>

@@ -62,7 +62,34 @@
     width: 100%;
     height: 100%;
     overflow: visible;
+
+    /* zoomed in, the lines run past the edges and must be cut there */
+    &.zoomed {
+      overflow: hidden;
+    }
   }
+
+  &.selecting {
+    cursor: col-resize;
+  }
+}
+
+.selection {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--mat-sys-primary) 20%, transparent);
+  pointer-events: none;
+}
+
+.anchor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--mat-sys-primary);
+  pointer-events: none;
 }
 
 .grid {
@@ -89,6 +116,11 @@
   font-size: 0.625rem;
   color: var(--mat-sys-on-surface-variant);
   pointer-events: none;
+}
+
+.scale.bottom {
+  top: auto;
+  bottom: 3px;
 }
 
 .cursor {

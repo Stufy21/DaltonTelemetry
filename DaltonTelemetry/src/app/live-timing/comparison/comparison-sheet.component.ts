@@ -1,9 +1,9 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, HostListener, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { COMPOUND_LETTER, formatLapTime } from '../format';
+import { COMPOUND_LETTER, formatLapTime, formatSector } from '../format';
 import { LiveTimingStore } from '../live-timing.store';
 import { TraceChannel } from '../telemetry';
 import { ComparisonStore } from './comparison.store';
@@ -49,6 +49,7 @@ export class ComparisonSheetComponent {
 
   protected readonly metrics = METRICS;
   protected readonly lapTime = formatLapTime;
+  protected readonly sector = formatSector;
   protected readonly compoundLetter = (c: string | null) => (c ? (COMPOUND_LETTER[c] ?? '?') : '–');
 
   protected readonly drivers = computed(() => {
@@ -90,6 +91,27 @@ export class ComparisonSheetComponent {
     return out;
   });
 
+  /** One row per selected driver with their best lap so far, for the best-laps mode. */
+  protected readonly bestRows = computed(() => {
+    const laps = new Map(this.cmp.bestLaps().map((b) => [b.driver, b.lap]));
+    return this.drivers().map((d, i) => ({
+      driver: d,
+      slot: i === 0 ? 'A' : 'B',
+      lap: laps.get(d.driverNumber) ?? null,
+    }));
+  });
+
+  /** B minus A on the lap time and each sector (negative = B faster); null when either is missing. */
+  protected readonly bestDelta = computed(() => {
+    const [a, b] = this.bestRows();
+    if (!a?.lap || !b?.lap) return null;
+    const diff = (x: number | null, y: number | null) => (x != null && y != null ? y - x : null);
+    return {
+      time: diff(a.lap.duration, b.lap.duration),
+      sectors: [0, 1, 2].map((i) => diff(a.lap!.sectors[i], b.lap!.sectors[i])),
+    };
+  });
+
   /** Mean estimated lap length of the shown traces, used to turn the hover position into metres. */
   protected readonly hoverMetres = computed(() => {
     const f = this.cmp.hover();
@@ -99,6 +121,24 @@ export class ComparisonSheetComponent {
     if (f == null || !lengths.length) return null;
     return Math.round(f * (lengths.reduce((a, b) => a + b, 0) / lengths.length));
   });
+
+  /** The zoomed stretch in metres from the start line, using the mean estimated lap length. */
+  protected readonly zoomMetres = computed(() => {
+    const zoom = this.cmp.zoom();
+    const lengths = Object.values(this.cmp.traces())
+      .filter((t) => !!t)
+      .map((t) => t.length);
+    if (!zoom || !lengths.length) return null;
+    const length = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+    return { from: Math.round(zoom.from * length), to: Math.round(zoom.to * length) };
+  });
+
+  /** Esc backs out of a selection first, then out of the zoom. */
+  @HostListener('window:keydown.escape')
+  protected onEscape(): void {
+    if (this.cmp.anchor() !== null) this.cmp.cancelSelection();
+    else if (this.cmp.zoom()) this.cmp.resetZoom();
+  }
 
   protected readonly hasTrace = computed(() => Object.values(this.cmp.traces()).some((t) => !!t));
 

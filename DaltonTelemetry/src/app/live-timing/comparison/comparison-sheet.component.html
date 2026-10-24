@@ -49,8 +49,90 @@
     @if (!cmp.collapsed()) {
       <div class="sheet-body">
         <div class="laps">
-          <h3>Last 5 laps</h3>
-          @if (cmp.lapRows().length) {
+          <div class="mode" role="group" aria-label="Which laps to compare">
+            <button
+              type="button"
+              [class.on]="cmp.mode() === 'recent'"
+              [attr.aria-pressed]="cmp.mode() === 'recent'"
+              (click)="cmp.setMode('recent')"
+            >
+              Last 5 laps
+            </button>
+            <button
+              type="button"
+              [class.on]="cmp.mode() === 'best'"
+              [attr.aria-pressed]="cmp.mode() === 'best'"
+              (click)="cmp.setMode('best')"
+            >
+              Best laps
+            </button>
+          </div>
+          @if (cmp.mode() === 'best') {
+            @if (bestRows().some((r) => r.lap)) {
+              <table class="best-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Lap</th>
+                    <th>Time</th>
+                    <th>S1</th>
+                    <th>S2</th>
+                    <th>S3</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of bestRows(); track r.driver.driverNumber) {
+                    <tr>
+                      <td class="who">
+                        <span class="slot">{{ r.slot }}</span
+                        >{{ r.driver.acronym }}
+                      </td>
+                      @if (r.lap; as lap) {
+                        <td class="lap-no">{{ lap.lap }}</td>
+                        <td class="best">{{ lapTime(lap.duration) }}</td>
+                        @for (s of lap.sectors; track $index) {
+                          <td>{{ sector(s) }}</td>
+                        }
+                      } @else {
+                        <td colspan="5" class="muted">No valid lap yet</td>
+                      }
+                    </tr>
+                  }
+                  @if (bestDelta(); as d) {
+                    <tr class="delta-row">
+                      <td class="who" matTooltip="Best lap of B minus best lap of A">Δ B–A</td>
+                      <td></td>
+                      <td>
+                        @if (d.time !== null) {
+                          <span [class.faster]="d.time < 0" [class.slower]="d.time > 0">{{
+                            formatDelta(d.time)
+                          }}</span>
+                        } @else {
+                          –
+                        }
+                      </td>
+                      @for (s of d.sectors; track $index) {
+                        <td>
+                          @if (s !== null) {
+                            <span [class.faster]="s < 0" [class.slower]="s > 0">{{
+                              formatDelta(s)
+                            }}</span>
+                          } @else {
+                            –
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <p class="note">
+                Each driver's fastest lap so far; the telemetry shows both together.
+              </p>
+            } @else {
+              <p class="empty">No timed lap yet for the selected drivers.</p>
+            }
+          } @else if (cmp.lapRows().length) {
             <table>
               <thead>
                 <tr>
@@ -110,7 +192,9 @@
           <div class="telemetry-head">
             <h3>
               Telemetry
-              @if (cmp.tracedLap(); as lap) {
+              @if (cmp.tracedMode() === 'best') {
+                <span class="muted">· best laps</span>
+              } @else if (cmp.tracedLap(); as lap) {
                 <span class="muted">· lap {{ lap }}</span>
               }
             </h3>
@@ -121,6 +205,25 @@
               <span class="muted dist">{{ m }} m into the lap</span>
             }
           </div>
+
+          @if (hasTrace()) {
+            <div class="zoom-bar" role="status">
+              @if (cmp.anchor() !== null) {
+                <span class="zoom-hint active">Click again to zoom to the selection</span>
+                <button mat-button (click)="cmp.cancelSelection()">Cancel</button>
+              } @else if (zoomMetres(); as z) {
+                <span class="zoom-hint active"
+                  ><mat-icon>zoom_in</mat-icon>Zoomed on {{ z.from }}–{{ z.to }} m</span
+                >
+                <button mat-button (click)="cmp.resetZoom()">Reset zoom</button>
+              } @else {
+                <span class="zoom-hint"
+                  ><mat-icon>zoom_in</mat-icon>Click a chart, move, click again to zoom into that
+                  stretch</span
+                >
+              }
+            </div>
+          }
 
           @if (cmp.error() && !hasTrace()) {
             <p class="empty">{{ cmp.error() }}</p>
@@ -138,6 +241,9 @@
                   [niceStep]="m.niceStep ?? 1"
                   [hover]="cmp.hover()"
                   (hoverChange)="cmp.hover.set($event)"
+                  [zoom]="cmp.zoom()"
+                  [anchor]="cmp.anchor()"
+                  (plotClick)="cmp.selectAt($event)"
                 />
               }
             </div>
