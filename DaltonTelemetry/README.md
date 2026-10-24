@@ -148,7 +148,11 @@ archive serves for a session. A whole season took about 2.5 hours and ~5 GB of d
 The same patch also keeps the live recorder from storing stale samples: on connecting, the feed first
 sends its last state with timestamps from the previous session, which would end up as `car_data` and
 `location` rows dated days before the session. Samples more than an hour older than the message that
-carries them are dropped (restart the recorder to pick the change up). The live recorder is not run
+carries them are dropped (restart the recorder to pick the change up).
+It also fills in a missing drivers list: for one qualifying the feed never sent `DriverList`, so the
+session had positions and laps but no drivers (no names or colours, an empty leaderboard). 90 seconds
+after the first message of a session without drivers, the recorder copies those of the weekend's
+previous session. The live recorder is not run
 on the VM: F1 blocks Oracle's addresses, so it runs from a home machine writing through the tunnel.
 
 The app side is tested against a fake local server (requests go to the configured URL, a live
