@@ -186,6 +186,18 @@
           } @else {
             <p class="empty">No completed laps yet at this point of the session.</p>
           }
+
+          @if (hasTrace() && outline().length > 1) {
+            <div class="locator">
+              <h3>Where on the circuit</h3>
+              <app-track-locator
+                [outline]="outline()"
+                [hover]="cmp.hover()"
+                [zoom]="cmp.zoom()"
+                [anchor]="cmp.anchor()"
+              />
+            </div>
+          }
         </div>
 
         <div class="telemetry">
@@ -202,7 +214,7 @@
               <mat-spinner diameter="16" />
             }
             @if (hoverMetres(); as m) {
-              <span class="muted dist">{{ m }} m into the lap</span>
+              <span class="muted dist">{{ m }} m into the lap · {{ hoverPercent() }}%</span>
             }
           </div>
 

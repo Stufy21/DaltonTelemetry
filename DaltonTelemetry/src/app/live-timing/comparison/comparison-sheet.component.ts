@@ -8,6 +8,7 @@ import { LiveTimingStore } from '../live-timing.store';
 import { TraceChannel } from '../telemetry';
 import { ComparisonStore } from './comparison.store';
 import { ChartSeries, TelemetryChartComponent } from './telemetry-chart.component';
+import { TrackLocatorComponent } from './track-locator.component';
 
 interface MetricConfig {
   key: TraceChannel;
@@ -39,6 +40,7 @@ const METRICS: MetricConfig[] = [
     MatProgressSpinnerModule,
     MatTooltipModule,
     TelemetryChartComponent,
+    TrackLocatorComponent,
   ],
   templateUrl: './comparison-sheet.component.html',
   styleUrl: './comparison-sheet.component.scss',
@@ -46,6 +48,8 @@ const METRICS: MetricConfig[] = [
 export class ComparisonSheetComponent {
   protected readonly cmp = inject(ComparisonStore);
   private readonly timing = inject(LiveTimingStore);
+  /** One lap of car coordinates drawing the circuit, shared with the track map widget. */
+  protected readonly outline = this.timing.outline;
 
   protected readonly metrics = METRICS;
   protected readonly lapTime = formatLapTime;
@@ -120,6 +124,12 @@ export class ComparisonSheetComponent {
       .map((t) => t.length);
     if (f == null || !lengths.length) return null;
     return Math.round(f * (lengths.reduce((a, b) => a + b, 0) / lengths.length));
+  });
+
+  /** How far round the lap the cursor is, in percent. */
+  protected readonly hoverPercent = computed(() => {
+    const f = this.cmp.hover();
+    return f == null ? null : Math.round(f * 100);
   });
 
   /** The zoomed stretch in metres from the start line, using the mean estimated lap length. */
