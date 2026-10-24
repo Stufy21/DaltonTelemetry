@@ -180,6 +180,66 @@ describe('TimingDataset', () => {
     expect(at(250).bestLap).toBe(95.2);
   });
 
+  it('shows a sector as soon as it is done, instead of when the lap ends', () => {
+    const ds = new TimingDataset();
+    ds.setDrivers([driver(1, 'AAA'), driver(2, 'BBB')]);
+    ds.addPositions([
+      { date: iso(0), driver_number: 1, position: 1 },
+      { date: iso(0), driver_number: 2, position: 2 },
+    ]);
+    // AAA's lap 1 ran 30/41/31; on lap 2 (from 100 s) it does 29/40/29, so S1 is done at 129 s,
+    // S2 at 169 s and the lap ends at 198 s. BBB is slower everywhere (31/42/32).
+    ds.mergeLaps([
+      lap(1, 1, 0, 102, [30, 41, 31]),
+      lap(1, 2, 102, 98, [29, 40, 29]),
+      lap(2, 1, 0, 105, [31, 42, 32]),
+    ]);
+    const sectors = (s: number) => ds.rows(T0 + s * 1000).find((r) => r.acronym === 'AAA')!.sectors;
+    // before S1 of lap 2 is done: still the previous lap's sectors
+    expect(sectors(120).map((x) => x.time)).toEqual([30, 41, 31]);
+    // S1 done at 131 s: just that sector is new, and already the fastest of the session (purple)
+    expect(sectors(135).map((x) => x.time)).toEqual([29, 41, 31]);
+    expect(sectors(135)[0].tone).toBe('purple');
+    // S2 done at 171 s
+    expect(sectors(175).map((x) => x.time)).toEqual([29, 40, 31]);
+    // lap done
+    expect(sectors(205).map((x) => x.time)).toEqual([29, 40, 29]);
+  });
+
+  it('finds the best lap of a driver as of a time, for comparing best laps', () => {
+    const ds = build(); // AAA: lap 1 = 100 s, lap 2 = 98 s; BBB: 101 s and 99 s
+    const best = (driver: number, s: number) => ds.bestLapOf(driver, T0 + s * 1000);
+    expect(best(1, 50)).toBeNull();
+    expect(best(1, 150)).toMatchObject({ lap: 1, duration: 100 });
+    expect(best(1, 250)).toMatchObject({ lap: 2, duration: 98, sectors: [29, 40, 29] });
+    expect(best(2, 250)).toMatchObject({ lap: 2, duration: 99 });
+    expect(best(99, 250)).toBeNull();
+  });
+
+  it('does not take an out-lap or a deleted lap as the best lap', () => {
+    const ds = new TimingDataset();
+    ds.mergeLaps([
+      { ...lap(3, 1, 0, 60, [20, 20, 20]), is_pit_out_lap: true },
+      lap(3, 2, 60, 99, [30, 40, 29]),
+      lap(3, 3, 159, 95, [29, 38, 28]),
+      lap(3, 4, 254, 100, [30, 40, 30]),
+    ]);
+    ds.addRaceControl([
+      {
+        date: iso(300),
+        driver_number: 3,
+        lap_number: 3,
+        category: 'Other',
+        flag: null,
+        scope: null,
+        sector: null,
+        message: 'CAR 3 (CCC) TIME 1:35.000 DELETED - TRACK LIMITS AT TURN 9 LAP 3 12:00:00',
+      },
+    ]);
+    expect(ds.bestLapOf(3, T0 + 280_000)?.lap).toBe(3); // the 95 s lap, not yet deleted
+    expect(ds.bestLapOf(3, T0 + 400_000)).toMatchObject({ lap: 2, duration: 99 }); // not the out-lap
+  });
+
   it('ignores a lap once the stewards have deleted it', () => {
     const ds = build();
     // BBB's 99 s lap ends at 200 s; the deletion is announced at 210 s
@@ -510,6 +570,17 @@ describe('TimingDataset location', () => {
       lap(1, 2, 60, 100, [30, 40, 30]),
     ]);
     expect(withOutLap.referenceLap()?.from).toBe(iso(60));
+  });
+
+  it('ranks the clean flying laps fastest first, as candidates for the circuit outline', () => {
+    const ds = build(); // laps: AAA 100 and 98 s, BBB 101 and 99 s
+    expect(ds.referenceLaps(3).map((l) => [l.driver, l.from])).toEqual([
+      [1, iso(100)],
+      [2, iso(101)],
+      [1, iso(0)],
+    ]);
+    expect(ds.referenceLaps(1)).toEqual([ds.referenceLap()!]);
+    expect(new TimingDataset().referenceLaps(5)).toEqual([]);
   });
 
   it('has no reference lap before any lap is recorded', () => {

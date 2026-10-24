@@ -123,6 +123,32 @@ h3 {
 
 /* ── Lap table ─────────────────────────────── */
 
+.mode {
+  display: inline-flex;
+  margin-bottom: 10px;
+  padding: 2px;
+  border: 1px solid var(--dt-border);
+  border-radius: 999px;
+  background: var(--dt-subtle);
+
+  button {
+    padding: 4px 12px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--mat-sys-on-surface-variant);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.on {
+      background: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+    }
+  }
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -172,6 +198,30 @@ tbody tr {
 .best {
   color: var(--dt-purple);
   font-weight: 700;
+}
+
+/* best laps: one row per driver, not a list of laps to pick from */
+.best-table {
+  tbody tr {
+    cursor: default;
+
+    &:hover {
+      background: transparent;
+    }
+  }
+
+  .who {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .delta-row td {
+    padding-top: 9px;
+    font-weight: 600;
+  }
 }
 
 .faster {
@@ -230,6 +280,33 @@ tbody tr {
   .dist {
     margin-left: auto;
     font-variant-numeric: tabular-nums;
+  }
+}
+
+.zoom-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  margin-bottom: 6px;
+}
+
+.zoom-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &.active {
+    font-weight: 600;
+    color: var(--mat-sys-primary);
   }
 }
 

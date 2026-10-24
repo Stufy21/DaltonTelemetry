@@ -15,6 +15,13 @@ import { LiveEvent, LiveFeedService } from '../core/openf1/live-feed.service';
 import { OF1Session, OF1Stint } from '../core/openf1/openf1.model';
 import { clampDelay, DELAY_STORAGE_KEY, readStoredDelay } from './delay';
 import { applyLiveBatch, stintKey } from './live-ingest';
+import {
+  analyseOutline,
+  isBetterOutline,
+  isCompleteOutline,
+  OUTLINE_CANDIDATES,
+  OutlineSample,
+} from './outline';
 import { pollCadence } from './polling';
 import { LapSummary, Point, TimingDataset } from './timing-dataset';
 
@@ -85,6 +92,13 @@ export class LiveTimingStore {
   private relayAvailable = false;
   /** Stint documents by (driver, stint), so streamed updates can rebuild the full list. */
   private stintDocs = new Map<string, OF1Stint>();
+
+  /** Circuit outline: the fastest laps already tried, the best outline found so far, retries. */
+  private outlineTried = new Set<string>();
+  private outlineBest: OutlineSample | null = null;
+  private outlineBusy = false;
+  private outlineRetries = 0;
+  private outlineTimer?: ReturnType<typeof setTimeout>;
 
   private loadedWindows = new Set<number>();
   private loadingWindows = new Set<number>();
@@ -179,6 +193,12 @@ export class LiveTimingStore {
     return finished && (type === 'Race' || type === 'Sprint') ? this.dataset.maxLap || null : null;
   });
 
+  /** A driver's best lap at the current clock time (reactive when read in a computed). */
+  bestLapOf(driver: number): LapSummary | null {
+    this.version();
+    return this.dataset.bestLapOf(driver, this.now());
+  }
+
   /** Last completed laps of a driver at the current clock time (reactive when read in a computed). */
   recentLaps(driver: number, count: number): LapSummary[] {
     this.version();
@@ -255,6 +275,10 @@ export class LiveTimingStore {
     this.failedWindows.clear();
     this.wantedWindow = null;
     this.outline.set([]);
+    this.outlineTried.clear();
+    this.outlineBest = null;
+    this.outlineBusy = false;
+    this.outlineRetries = 0;
     this.session.set(session);
     this.error.set(null);
     this.liveError.set(null);
@@ -502,23 +526,43 @@ export class LiveTimingStore {
   }
 
   /** Fetches one clean lap of one car, which traces the circuit. Retried after later polls. */
+  /**
+   * Draws the circuit from the car coordinates of one fast lap. A lap with a silence in its data
+   * draws a corner cut short, so the fastest laps are tried in turn until one has no real gap, and
+   * the best seen so far is kept in the meantime. A failed request is retried a few times.
+   */
   private loadOutline(generation: number, cache: boolean): void {
     const session = this.session();
-    const lap = this.dataset.referenceLap();
-    if (!session || !lap || this.outline().length) return;
+    if (!session || this.outlineBusy || isCompleteOutline(this.outlineBest)) return;
+    const lap = this.dataset
+      .referenceLaps(OUTLINE_CANDIDATES)
+      .find((l) => !this.outlineTried.has(`${l.driver}:${l.from}`));
+    if (!lap) return;
 
+    this.outlineBusy = true;
     const sub = this.api
       .getLocation(session.session_key, lap.from, lap.to, lap.driver, cache)
       .subscribe({
         next: (rows) => {
+          this.outlineBusy = false;
           if (generation !== this.generation) return;
-          this.outline.set(
-            rows
-              .filter((r) => !(r.x === 0 && r.y === 0 && r.z === 0))
-              .map((r) => ({ x: r.x, y: r.y })),
+          this.outlineTried.add(`${lap.driver}:${lap.from}`);
+          const found = analyseOutline(rows);
+          if (isBetterOutline(found, this.outlineBest)) {
+            this.outlineBest = found;
+            this.outline.set(found.points);
+          }
+          this.loadOutline(generation, cache); // no-op once the outline is complete
+        },
+        error: () => {
+          this.outlineBusy = false;
+          if (generation !== this.generation || this.outlineRetries >= 3) return;
+          this.outlineRetries++;
+          this.outlineTimer = setTimeout(
+            () => this.loadOutline(generation, cache),
+            this.outlineRetries * 3000,
           );
         },
-        error: () => undefined,
       });
     this.workSubs.add(sub);
   }
@@ -642,6 +686,7 @@ export class LiveTimingStore {
     this.generation++;
     this.loadSub?.unsubscribe();
     clearTimeout(this.windowTimer);
+    clearTimeout(this.outlineTimer);
     for (const sub of this.workSubs) sub.unsubscribe();
     this.workSubs.clear();
     this.stopPolling();

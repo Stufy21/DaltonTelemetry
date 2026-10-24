@@ -93,6 +93,21 @@ interface LapRecord {
 
 const toMs = (iso: string): number => Date.parse(iso);
 
+function sectorOf(lap: OF1Lap, index: number): number | null {
+  return [lap.duration_sector_1, lap.duration_sector_2, lap.duration_sector_3][index];
+}
+
+function lapSummary(r: LapRecord): LapSummary {
+  return {
+    lap: r.lap.lap_number,
+    start: r.start,
+    end: r.end,
+    duration: r.lap.lap_duration,
+    sectors: [r.lap.duration_sector_1, r.lap.duration_sector_2, r.lap.duration_sector_3],
+    pitOut: r.lap.is_pit_out_lap,
+  };
+}
+
 /** Between two consecutive laps, a gap longer than this means the car was in the pit lane. */
 const PIT_GAP_MS = 2_000;
 /** A live lap with no successor yet: how long to wait before assuming the car is in the pits. */
@@ -236,14 +251,32 @@ export class TimingDataset {
   recentLaps(driver: number, t: number, count: number): LapSummary[] {
     const track = this.tracks().get(driver) ?? [];
     const done = upperBound(track, t, (r) => r.end);
-    return track.slice(Math.max(0, done - count), done).map((r) => ({
-      lap: r.lap.lap_number,
-      start: r.start,
-      end: r.end,
-      duration: r.lap.lap_duration,
-      sectors: [r.lap.duration_sector_1, r.lap.duration_sector_2, r.lap.duration_sector_3],
-      pitOut: r.lap.is_pit_out_lap,
-    }));
+    return track.slice(Math.max(0, done - count), done).map(lapSummary);
+  }
+
+  /**
+   * The driver's best lap as of time t, by the same rules as the leaderboard: an out-lap is no lap
+   * time, and neither is a lap the stewards had deleted by then.
+   */
+  bestLapOf(driver: number, t: number): LapSummary | null {
+    const track = this.tracks().get(driver) ?? [];
+    const done = upperBound(track, t, (r) => r.end);
+    let best: LapRecord | null = null;
+    for (let i = 0; i < done; i++) {
+      if (!this.countsAsLapTime(driver, track[i].lap, t)) continue;
+      if (!best || (track[i].lap.lap_duration as number) < (best.lap.lap_duration as number)) {
+        best = track[i];
+      }
+    }
+    return best ? lapSummary(best) : null;
+  }
+
+  private countsAsLapTime(driver: number, lap: OF1Lap, t: number): boolean {
+    const time = lap.lap_duration;
+    if (time == null || lap.is_pit_out_lap) return false;
+    return !this.deletedLaps
+      .get(driver)
+      ?.some((d) => d.at <= t && Math.abs(d.duration - time) < 0.0015);
   }
 
   /**
@@ -280,20 +313,24 @@ export class TimingDataset {
    * or null while no lap has been completed yet.
    */
   referenceLap(): ReferenceLap | null {
-    let best: LapRecord | null = null;
+    return this.referenceLaps(1)[0] ?? null;
+  }
+
+  /** The `limit` fastest such laps, fastest first: the outline tries them until one has no gaps. */
+  referenceLaps(limit: number): ReferenceLap[] {
+    const flying: LapRecord[] = [];
     for (const track of this.tracks().values()) {
       for (const rec of track) {
-        const duration = rec.lap.lap_duration;
-        if (!duration || rec.lap.is_pit_out_lap || !Number.isFinite(rec.end)) continue;
-        if (!best || duration < (best.lap.lap_duration as number)) best = rec;
+        if (!rec.lap.lap_duration || rec.lap.is_pit_out_lap || !Number.isFinite(rec.end)) continue;
+        flying.push(rec);
       }
     }
-    if (!best) return null;
-    return {
-      driver: best.lap.driver_number,
-      from: new Date(best.start).toISOString(),
-      to: new Date(best.end).toISOString(),
-    };
+    flying.sort((a, b) => (a.lap.lap_duration as number) - (b.lap.lap_duration as number));
+    return flying.slice(0, limit).map((rec) => ({
+      driver: rec.lap.driver_number,
+      from: new Date(rec.start).toISOString(),
+      to: new Date(rec.end).toISOString(),
+    }));
   }
 
   /**
@@ -385,9 +422,12 @@ export class TimingDataset {
       // an out-lap's time includes the wait in the garage or pit lane, so it is not a lap time
       const lastLap = rec && !rec.lap.is_pit_out_lap ? (rec.lap.lap_duration ?? null) : null;
       const mine = this.bestAt(id, track, completed, t);
-      const sectorTimes = rec
-        ? [rec.lap.duration_sector_1, rec.lap.duration_sector_2, rec.lap.duration_sector_3]
-        : [null, null, null];
+      // A sector shows as soon as it is done: the lap in progress supplies the sectors it has
+      // finished, the last completed lap the ones it hasn't reached yet.
+      const live = this.inProgress(track, completed, t);
+      const sectorTimes = [0, 1, 2].map(
+        (i) => this.sectorDone(live, i, t) ?? (rec ? sectorOf(rec.lap, i) : null),
+      );
       const sectors = sectorTimes.map((time, i) =>
         sectorView(time, overall[i + 1], finiteOrNull(mine[i + 1])),
       ) as TimingRow['sectors'];
@@ -477,7 +517,6 @@ export class TimingDataset {
     const best: [number, number, number, number] = [Infinity, Infinity, Infinity, Infinity];
     for (const [driver, track] of tracks) {
       const n = upperBound(track, t, (r) => r.end);
-      if (n === 0) continue;
       const mine = this.bestAt(driver, track, n, t);
       for (let i = 0; i < 4; i++) best[i] = Math.min(best[i], mine[i]);
     }
@@ -495,20 +534,41 @@ export class TimingDataset {
     t: number,
   ): [number, number, number, number] {
     const best: [number, number, number, number] = [Infinity, Infinity, Infinity, Infinity];
-    const deleted = this.deletedLaps.get(driver);
     for (let i = 0; i < completed; i++) {
       const { lap } = track[i];
-      const time = lap.lap_duration;
-      const counts =
-        time != null &&
-        !lap.is_pit_out_lap &&
-        !deleted?.some((d) => d.at <= t && Math.abs(d.duration - time) < 0.0015);
-      if (counts) best[0] = Math.min(best[0], time);
+      if (this.countsAsLapTime(driver, lap, t)) best[0] = Math.min(best[0], lap.lap_duration!);
       best[1] = Math.min(best[1], lap.duration_sector_1 ?? Infinity);
       best[2] = Math.min(best[2], lap.duration_sector_2 ?? Infinity);
       best[3] = Math.min(best[3], lap.duration_sector_3 ?? Infinity);
     }
+    // sectors already done on the lap in progress count too, or a fresh best sector would only turn
+    // purple once the lap ends
+    const live = this.inProgress(track, completed, t);
+    for (let j = 0; j < 3; j++) {
+      const time = this.sectorDone(live, j, t);
+      if (time != null) best[j + 1] = Math.min(best[j + 1], time);
+    }
     return best;
+  }
+
+  /** The lap running at time t: the first one not yet finished, if it has started. */
+  private inProgress(track: LapRecord[], completed: number, t: number): LapRecord | null {
+    const next = track[completed];
+    return next && next.start <= t ? next : null;
+  }
+
+  /**
+   * Sector `index` (0-2) of a lap, once the car has got through it by time t. A sector is done
+   * when the lap start plus the sectors up to it have elapsed, so a replay (or a delayed view)
+   * doesn't show a sector before it was driven.
+   */
+  private sectorDone(rec: LapRecord | null, index: number, t: number): number | null {
+    if (!rec) return null;
+    const time = sectorOf(rec.lap, index);
+    if (time == null) return null;
+    let at = rec.start;
+    for (let j = 0; j <= index; j++) at += (sectorOf(rec.lap, j) ?? 0) * 1000;
+    return at <= t ? time : null;
   }
 
   /** "CAR 14 (ALO) TIME 1:38.910 DELETED - TRACK LIMITS ..." -> that lap no longer counts. */
