@@ -163,6 +163,23 @@ describe('TimingDataset', () => {
     ]);
   });
 
+  it('counts a lap whose start was never recorded, as when the recorder joined mid-lap', () => {
+    const ds = new TimingDataset();
+    ds.setDrivers([driver(3, 'CCC')]);
+    ds.addPositions([{ date: iso(0), driver_number: 3, position: 1 }]);
+    // lap 1 (95.2 s) has no start: the recorder connected during it; lap 2 starts at 95.2 s
+    ds.mergeLaps([
+      { ...lap(3, 1, 0, 95.2, [0, 37.8, 31.7]), date_start: null, duration_sector_1: null },
+      lap(3, 2, 95.2, 125.79, [35.5, 47.4, 42.9]),
+    ]);
+    const at = (s: number) => ds.rows(T0 + s * 1000).find((r) => r.acronym === 'CCC')!;
+    expect(at(100).lastLap).toBe(95.2);
+    expect(at(100).bestLap).toBe(95.2);
+    // the slow second lap must not replace it as the best
+    expect(at(250).lastLap).toBe(125.79);
+    expect(at(250).bestLap).toBe(95.2);
+  });
+
   it('ignores a lap once the stewards have deleted it', () => {
     const ds = build();
     // BBB's 99 s lap ends at 200 s; the deletion is announced at 210 s

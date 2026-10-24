@@ -532,13 +532,21 @@ export class TimingDataset {
     if (!this.lapsDirty) return this.lapTracks;
     this.lapTracks = new Map();
     for (const [driver, laps] of this.lapsByDriver) {
-      const ordered = [...laps.values()]
-        .filter((l) => l.date_start)
-        .sort((a, b) => a.lap_number - b.lap_number);
+      const ordered = [...laps.values()].sort((a, b) => a.lap_number - b.lap_number);
       const records: LapRecord[] = [];
       ordered.forEach((lap, i) => {
-        const start = toMs(lap.date_start as string);
         const next = ordered[i + 1]?.date_start;
+        let start: number;
+        if (lap.date_start) {
+          start = toMs(lap.date_start);
+        } else if (!lap.is_pit_out_lap && lap.lap_duration && next) {
+          // The recorder joined in the middle of this lap, so its start was never seen. A lap ends
+          // where the next one starts, which gives the start back (an out-lap's duration includes
+          // the wait before it and can't be used this way).
+          start = toMs(next) - lap.lap_duration * 1000;
+        } else {
+          return;
+        }
         // An out-lap's duration includes the wait before it (706 s for a lap that started 2 minutes
         // before the next one), so `start + duration` can land after later laps have finished.
         // A lap never ends after the next one starts, and an out-lap with no successor yet is

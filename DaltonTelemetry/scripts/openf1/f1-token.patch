@@ -71,18 +71,30 @@ index 68181e4..7bc21e4 100644
  
  
 diff --git a/src/openf1/services/ingestor_livetiming/real_time/processing.py b/src/openf1/services/ingestor_livetiming/real_time/processing.py
-index 9c14888..1c9d14d 100644
+index 9c14888..3e45a96 100644
 --- a/src/openf1/services/ingestor_livetiming/real_time/processing.py
 +++ b/src/openf1/services/ingestor_livetiming/real_time/processing.py
-@@ -1,6 +1,7 @@
+@@ -1,18 +1,39 @@
  import asyncio
  import json
  import os
++import time
 +from datetime import timedelta
  
  from loguru import logger
  
-@@ -13,6 +14,12 @@ from openf1.util.mqtt import initialize_mqtt
+ from openf1.services.ingestor_livetiming.core.decoding import decode
+ from openf1.services.ingestor_livetiming.core.objects import Document, Message
+ from openf1.services.ingestor_livetiming.core.processing.main import process_message
+-from openf1.util.db import get_closest_session_info, insert_data_async
++from openf1.services.ingestor_livetiming.core.processing.collections.drivers import Driver
++from openf1.util.db import (
++    _get_mongo_db_async,
++    get_closest_session_info,
++    insert_data_async,
++)
+ from openf1.util.misc import json_serializer, to_datetime
+ from openf1.util.mqtt import initialize_mqtt
  
  NETWORK_TIMEOUT = 10.0  # 10 seconds
  
@@ -92,10 +104,18 @@ index 9c14888..1c9d14d 100644
 +STALE_AFTER = timedelta(hours=1)
 +_STALE_COLLECTIONS = {"car_data", "location"}
 +
++# The feed sends the drivers list ("DriverList") when it decides to, and for some sessions never did
++# (a qualifying recorded without it had positions and laps but no drivers, so no names or colours).
++# If a session still has no drivers this long after its first message, they are copied from the
++# previous session of the same weekend (the line-up is the same).
++DRIVERS_GRACE_SECONDS = 90
++_first_seen: dict[int, float] = {}
++_drivers_checked: set[int] = set()
++
  if "OPENF1_MQTT_URL" in os.environ:
      from openf1.util.mqtt import publish_messages_to_mqtt
  
-@@ -78,6 +85,23 @@ def _process_message(message: Message) -> dict[str, list[Document]] | None:
+@@ -78,13 +99,91 @@ def _process_message(message: Message) -> dict[str, list[Document]] | None:
      return docs_by_collection
  
  
@@ -116,10 +136,68 @@ index 9c14888..1c9d14d 100644
 +    return kept
 +
 +
++async def _ensure_drivers(meeting_key: int, session_key: int) -> None:
++    """Copies the drivers of the weekend's previous session when this one has none"""
++    db = _get_mongo_db_async()
++    if await db["drivers"].count_documents({"session_key": session_key}, limit=1):
++        return
++
++    query: dict = {"meeting_key": meeting_key, "session_key": {"$ne": session_key}}
++    current = await db["sessions"].find_one({"session_key": session_key})
++    if current and current.get("date_start"):
++        query["date_start"] = {"$lt": current["date_start"]}
++
++    rows = []
++    async for session in db["sessions"].find(query).sort("date_start", -1):
++        rows = (
++            await db["drivers"]
++            .find({"session_key": session["session_key"]})
++            .sort("_index", 1)
++            .to_list(None)
++        )
++        if rows:
++            source = session["session_key"]
++            break
++    if not rows:
++        logger.warning(
++            f"Session {session_key} has no drivers and no other session of meeting "
++            f"{meeting_key} has any to copy"
++        )
++        return
++
++    docs = []
++    for row in rows:
++        fields = {k: v for k, v in row.items() if k not in ("_id", "_key")}
++        fields["meeting_key"] = meeting_key
++        fields["session_key"] = session_key
++        docs.append(await Driver(**fields).to_mongo_doc_async())
++    await insert_data_async("drivers", docs)
++    logger.warning(
++        f"No DriverList received for session {session_key}: copied {len(docs)} drivers "
++        f"from session {source}"
++    )
++
++
++async def _check_drivers() -> None:
++    """Runs the drivers fallback once per session, after the grace period"""
++    session_key = _session_key
++    if session_key is None or session_key in _drivers_checked:
++        return
++    first = _first_seen.setdefault(session_key, time.monotonic())
++    if time.monotonic() - first < DRIVERS_GRACE_SECONDS:
++        return
++    _drivers_checked.add(session_key)
++    try:
++        await _ensure_drivers(_meeting_key, session_key)
++    except Exception:
++        logger.exception("Could not check the drivers of the session")
++
++
  async def ingest_line(line: str):
      """Asynchronously ingests a single line of raw data"""
      message = _parse_message(line)
-@@ -85,6 +109,9 @@ async def ingest_line(line: str):
+     docs_by_collection = _process_message(message)
++    await _check_drivers()
      if docs_by_collection is None:
          return
      for collection, docs in docs_by_collection.items():
