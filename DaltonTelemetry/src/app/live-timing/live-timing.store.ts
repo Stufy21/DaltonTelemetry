@@ -552,7 +552,7 @@ export class LiveTimingStore {
           this.outlineBusy = false;
           if (generation !== this.generation) return;
           this.outlineTried.add(`${lap.driver}:${lap.from}`);
-          const found = analyseOutline(rows);
+          const found = analyseOutline(rows, { from: lap.from, to: lap.to });
           if (isBetterOutline(found, this.outlineBest)) {
             this.outlineBest = found;
             this.outline.set(found.points);
