@@ -23,6 +23,7 @@ import {
   OutlineSample,
 } from './outline';
 import { pollCadence } from './polling';
+import { scheduledLaps } from './race-distance';
 import { LapSummary, Point, TimingDataset } from './timing-dataset';
 
 const TICK_MS = 250;
@@ -190,12 +191,14 @@ export class LiveTimingStore {
       colour: this.dataset.drivers.get(r.driver_number)?.team_colour ?? '888888',
     })),
   );
-  /** Only Race/Sprint have a meaningful total, and only once the session is over. */
+  /** Race/Sprint only: the scheduled laps while it runs, the laps actually run once it is over. */
   readonly totalLaps = computed(() => {
     this.version();
-    const type = this.session()?.session_type;
+    const session = this.session();
+    if (session?.session_type !== 'Race') return null;
+    // over: the laps actually run (a race can be cut short); until then: the scheduled distance
     const finished = !this.sessionLive() && !this.loading();
-    return finished && (type === 'Race' || type === 'Sprint') ? this.dataset.maxLap || null : null;
+    return finished ? this.dataset.maxLap || null : scheduledLaps(session);
   });
 
   /** A driver's best lap at the current clock time (reactive when read in a computed). */
