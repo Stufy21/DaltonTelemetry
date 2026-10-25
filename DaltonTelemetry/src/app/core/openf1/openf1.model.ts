@@ -5,6 +5,8 @@ export interface OF1Session {
   date_start: string;
   date_end: string;
   meeting_key: number;
+  /** Identifies the circuit across seasons (OpenF1 always sends it). */
+  circuit_key?: number;
   circuit_short_name: string;
   country_name: string;
   location: string;
