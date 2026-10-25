@@ -27,8 +27,13 @@ import { LapSummary, Point, TimingDataset } from './timing-dataset';
 
 const TICK_MS = 250;
 
-/** A session is considered live from shortly before it starts to a while after the scheduled end. */
-const LIVE_WINDOW_BEFORE_MS = 15 * 60_000;
+/**
+ * A session is considered live from before it starts to a while after the scheduled end. The window
+ * before the start is an hour, not the 15 minutes before which OpenF1 itself opens a session: our
+ * own recorder starts earlier and the grid, drivers and cars are worth seeing before the start. A
+ * session listed any earlier would be treated as finished, and its partial data cached.
+ */
+const LIVE_WINDOW_BEFORE_MS = 60 * 60_000;
 const LIVE_WINDOW_AFTER_MS = 10 * 60_000;
 const RECENT_LAPS_WINDOW_MS = 5 * 60_000;
 
