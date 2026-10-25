@@ -6,6 +6,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { COMPOUND_LETTER, formatLapTime, formatSector } from '../format';
 import { LiveTimingStore } from '../live-timing.store';
 import { TraceChannel } from '../telemetry';
+import { buildBestTable } from './best-laps';
 import { ComparisonStore } from './comparison.store';
 import { ChartSeries, TelemetryChartComponent } from './telemetry-chart.component';
 import { TrackLocatorComponent } from './track-locator.component';
@@ -105,16 +106,8 @@ export class ComparisonSheetComponent {
     }));
   });
 
-  /** B minus A on the lap time and each sector (negative = B faster); null when either is missing. */
-  protected readonly bestDelta = computed(() => {
-    const [a, b] = this.bestRows();
-    if (!a?.lap || !b?.lap) return null;
-    const diff = (x: number | null, y: number | null) => (x != null && y != null ? y - x : null);
-    return {
-      time: diff(a.lap.duration, b.lap.duration),
-      sectors: [0, 1, 2].map((i) => diff(a.lap!.sectors[i], b.lap!.sectors[i])),
-    };
-  });
+  /** The best-laps comparison: lap, time and sectors of each driver's best lap, and B minus A. */
+  protected readonly bestTable = computed(() => buildBestTable(this.bestRows().map((r) => r.lap)));
 
   /** Mean estimated lap length of the shown traces, used to turn the hover position into metres. */
   protected readonly hoverMetres = computed(() => {

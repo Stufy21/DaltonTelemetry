@@ -73,52 +73,30 @@
                 <thead>
                   <tr>
                     <th></th>
-                    <th>Lap</th>
-                    <th>Time</th>
-                    <th>S1</th>
-                    <th>S2</th>
-                    <th>S3</th>
+                    @for (r of bestRows(); track r.driver.driverNumber) {
+                      <th class="who">
+                        <span class="slot">{{ r.slot }}</span
+                        >{{ r.driver.acronym }}
+                      </th>
+                    }
+                    @if (bestRows().length > 1) {
+                      <th matTooltip="Best lap of B minus best lap of A">Δ B–A</th>
+                    }
                   </tr>
                 </thead>
                 <tbody>
-                  @for (r of bestRows(); track r.driver.driverNumber) {
+                  @for (row of bestTable(); track row.label) {
                     <tr>
-                      <td class="who">
-                        <span class="slot">{{ r.slot }}</span
-                        >{{ r.driver.acronym }}
-                      </td>
-                      @if (r.lap; as lap) {
-                        <td class="lap-no">{{ lap.lap }}</td>
-                        <td class="best">{{ lapTime(lap.duration) }}</td>
-                        @for (s of lap.sectors; track $index) {
-                          <td>{{ sector(s) }}</td>
-                        }
-                      } @else {
-                        <td colspan="5" class="muted">No valid lap yet</td>
+                      <th scope="row" class="label">{{ row.label }}</th>
+                      @for (cell of row.cells; track $index) {
+                        <td [class.quickest]="cell.fastest">{{ cell.text }}</td>
                       }
-                    </tr>
-                  }
-                  @if (bestDelta(); as d) {
-                    <tr class="delta-row">
-                      <td class="who" matTooltip="Best lap of B minus best lap of A">Δ B–A</td>
-                      <td></td>
-                      <td>
-                        @if (d.time !== null) {
-                          <span [class.faster]="d.time < 0" [class.slower]="d.time > 0">{{
-                            formatDelta(d.time)
-                          }}</span>
-                        } @else {
-                          –
-                        }
-                      </td>
-                      @for (s of d.sectors; track $index) {
-                        <td>
-                          @if (s !== null) {
-                            <span [class.faster]="s < 0" [class.slower]="s > 0">{{
-                              formatDelta(s)
+                      @if (bestRows().length > 1) {
+                        <td class="delta">
+                          @if (row.delta !== null) {
+                            <span [class.faster]="row.delta < 0" [class.slower]="row.delta > 0">{{
+                              formatDelta(row.delta)
                             }}</span>
-                          } @else {
-                            –
                           }
                         </td>
                       }
