@@ -503,11 +503,16 @@ export class TimingDataset {
     const last = done > 0 ? track[done - 1] : null;
     if (!last || last.lap.lap_duration == null || !Number.isFinite(last.end)) return false;
     const next = track[done];
+
+    const chequeredShown = this.raceControl
+      .entries()
+      .some((x) => x.t <= t && x.v.flag === 'CHEQUERED');
+
     // normally the next lap starts the moment this one ends; when it is not there yet, wait long
     // enough for the live feed to deliver it before calling it a stop
     return next
       ? next.start - last.end > PIT_GAP_MS && t < next.start
-      : t - last.end > LIVE_PIT_WAIT_MS;
+      : !chequeredShown && t - last.end > LIVE_PIT_WAIT_MS;
   }
 
   private overallBest(
