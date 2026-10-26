@@ -1,0 +1,80 @@
+<section class="elements-page">
+  <header class="page-header">
+    <div>
+      <h2>{{ snapshot.season }} Used Elements</h2>
+      <p>Power unit parts each driver has used this season, against the allowance.</p>
+    </div>
+    <span class="count">After the {{ snapshot.event }}</span>
+  </header>
+
+  <div class="table-card">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="who">Driver</th>
+            @for (e of elements; track e.key) {
+              <th [matTooltip]="e.name">
+                {{ e.label }}<span class="allow">max {{ e.limit }}</span>
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of rows(); track d.car) {
+            <tr>
+              <th scope="row" class="who">
+                <span class="bar" [style.background]="d.colour"></span>
+                <span class="name">
+                  <strong>{{ d.driver }}</strong>
+                  <span class="team">{{ d.team }}</span>
+                </span>
+              </th>
+              @for (e of elements; track e.key; let i = $index) {
+                <td
+                  [class]="'cell ' + state(d, i)"
+                  [class.fresh]="isNew(d, i)"
+                  [matTooltip]="tip(d, i)"
+                >
+                  {{ d.used[e.key] }}
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <ul class="legend">
+      <li><span class="swatch ok"></span>within the allowance</li>
+      <li><span class="swatch at"></span>on the allowance: the next new part costs a penalty</li>
+      <li><span class="swatch over"></span>above the allowance</li>
+      <li><span class="swatch fresh"></span>fitted new this weekend</li>
+    </ul>
+  </div>
+
+  @if (penalties().length) {
+    <h3>Grid penalties for power unit parts</h3>
+    <div class="penalties">
+      @for (p of penalties(); track p.car) {
+        <div class="penalty">
+          <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+          <div>
+            <strong>{{ p.driver }}</strong>
+            <span class="muted">car {{ p.car }}</span>
+          </div>
+          @if (p.places) {
+            <span class="places">{{ p.places }} places</span>
+          }
+          @for (o of p.other; track $index) {
+            <span class="places">{{ o }}</span>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <p class="note">
+    Counts come from the FIA Technical Delegate's reports and the Stewards' decisions for the
+    {{ snapshot.event }}; the totals are updated once the reports of a new weekend are out.
+  </p>
+</section>

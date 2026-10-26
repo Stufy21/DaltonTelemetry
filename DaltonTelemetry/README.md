@@ -94,6 +94,24 @@ node scripts/generate-circuit-outlines.mjs   # about 3-5 minutes on OpenF1's fre
 Run it again only when a circuit is added or changes its layout (add the circuit to the table at
 the top of the script: Ergast circuit id -> OpenF1 `circuit_key`).
 
+## Used Elements
+
+The "Used Elements" page shows how many power unit parts (ICE, TC, exhaust, MGU-K, ES, CE, ANC)
+each driver has used against the season allowance, and the grid penalties that follow. OpenF1 has
+no such data, so it comes from the FIA's public race documents (the Technical Delegate's reports
+and the Stewards' decisions), read by a script and stored in
+`src/app/dashboards/used-elements/pu-elements.data.ts`:
+
+```bash
+pip install pdfplumber
+python scripts/fia/pu-elements.py                           # the latest event on the FIA page
+python scripts/fia/pu-elements.py "Mexico City Grand Prix"  # a specific event
+```
+
+Run it after each race weekend, once the reports are out (Thursday, updated through the weekend),
+and commit the regenerated file. The script stops with an error instead of writing numbers when a
+document does not look as expected.
+
 ## Self-hosted OpenF1 (live data without the sponsor plan)
 
 [OpenF1](https://github.com/br-g/openf1) is open source (CC BY-NC-SA 4.0: non-commercial use only).

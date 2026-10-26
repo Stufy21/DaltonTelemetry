@@ -1,0 +1,231 @@
+:host {
+  display: block;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.count {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--dt-subtle);
+  border: 1px solid var(--dt-border);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.table-card {
+  background: var(--dt-card);
+  border: 1px solid var(--dt-border);
+  border-radius: var(--dt-radius);
+  box-shadow: var(--dt-shadow);
+  overflow: hidden;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+thead th {
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--mat-sys-on-surface-variant);
+  border-bottom: 1px solid var(--dt-border);
+
+  .allow {
+    display: block;
+    margin-top: 1px;
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+}
+
+.who {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 190px;
+  padding: 8px 12px;
+  background: var(--dt-card);
+  text-align: left;
+  font-weight: 400;
+}
+
+thead .who {
+  display: table-cell;
+  text-align: left;
+}
+
+tbody tr + tr > * {
+  border-top: 1px solid var(--dt-border);
+}
+
+.bar {
+  width: 4px;
+  height: 30px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  strong {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+}
+
+.team {
+  font-size: 0.6875rem;
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+}
+
+.cell {
+  padding: 8px;
+  text-align: center;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: default;
+
+  &.at {
+    color: var(--dt-orange);
+    background: color-mix(in srgb, var(--dt-orange) 14%, transparent);
+  }
+
+  &.over {
+    color: var(--mat-sys-error);
+    background: color-mix(in srgb, var(--mat-sys-error) 14%, transparent);
+  }
+
+  // Fitted this weekend: a bar under the number, whatever the state colour.
+  &.fresh {
+    box-shadow: inset 0 -3px 0 var(--mat-sys-primary);
+  }
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 10px 14px;
+  list-style: none;
+  border-top: 1px solid var(--dt-border);
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--dt-border);
+
+  &.at {
+    background: color-mix(in srgb, var(--dt-orange) 30%, transparent);
+  }
+
+  &.over {
+    background: color-mix(in srgb, var(--mat-sys-error) 30%, transparent);
+  }
+
+  &.fresh {
+    box-shadow: inset 0 -3px 0 var(--mat-sys-primary);
+  }
+}
+
+h3 {
+  margin: 24px 0 10px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.penalties {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.penalty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--dt-card);
+  border: 1px solid var(--dt-border);
+  border-radius: var(--dt-radius);
+
+  mat-icon {
+    color: var(--mat-sys-error);
+  }
+
+  div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .places {
+    margin-left: auto;
+    font-weight: 700;
+    color: var(--mat-sys-error);
+    white-space: nowrap;
+  }
+}
+
+.muted {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.note {
+  margin: 14px 0 0;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+}
