@@ -49,6 +49,7 @@ export class ShellComponent {
   readonly navTree: NavNode[] = [
     { label: 'Live Timing', icon: 'sensors', route: '/live-timing' },
     { label: 'Statistics', icon: 'query_stats', route: '/statistics' },
+    { label: 'Used Elements', icon: 'precision_manufacturing', route: '/used-elements' },
   ];
 
   readonly themeOptions: { mode: ThemeMode; label: string; icon: string }[] = [

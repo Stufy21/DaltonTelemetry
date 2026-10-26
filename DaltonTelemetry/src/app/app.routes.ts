@@ -8,6 +8,13 @@ export const routes: Routes = [
       import('./live-timing/live-timing.component').then((m) => m.LiveTimingComponent),
   },
   {
+    path: 'used-elements',
+    loadComponent: () =>
+      import('./dashboards/used-elements/used-elements.component').then(
+        (m) => m.UsedElementsComponent,
+      ),
+  },
+  {
     path: 'settings',
     loadComponent: () => import('./settings/settings.component').then((m) => m.SettingsComponent),
   },
