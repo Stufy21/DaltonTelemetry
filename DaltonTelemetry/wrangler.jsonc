@@ -9,6 +9,12 @@
   "build": {
     "command": "npm run build:cloudflare"
   },
+  // Custom domains: Cloudflare creates the DNS records and certificates on deploy. The zone must
+  // already be active on this account, or the deploy fails.
+  "routes": [
+    { "pattern": "daltontv-telemetry.eu", "custom_domain": true },
+    { "pattern": "www.daltontv-telemetry.eu", "custom_domain": true }
+  ],
   "assets": {
     "directory": "./dist/DaltonTelemetry/browser",
     // Routes with no file of their own (/live-timing, /reports/stats/:id) get the app shell.

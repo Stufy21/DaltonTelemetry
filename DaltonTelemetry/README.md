@@ -193,4 +193,6 @@ What this deployment does and does not include:
 - Data comes straight from the browser to OpenF1, Jolpica and Wikipedia, so nothing else has to be
   configured. `package-lock.json` is git-ignored in this project; commit it (or remove it from
   `.gitignore`) if you want reproducible installs on Cloudflare's build machines.
-- The site is published at https://daltontelemetry.thomas-stufano.workers.dev.
+- The site is published at https://daltontv-telemetry.eu (also reachable at
+  https://daltontelemetry.thomas-stufano.workers.dev). The domain is registered at Namecheap with
+  Cloudflare nameservers; `routes` in `wrangler.jsonc` attaches it to the Worker.
