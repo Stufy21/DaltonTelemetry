@@ -30,7 +30,18 @@
         ><span>{{ row.position ?? '–' }}</span></span
       >
       <span class="c-driver" role="cell" [title]="row.fullName + ' · ' + row.teamName">
-        <span class="team-bar" [style.background]="row.teamColour"></span>
+        @if (logo(row.teamName); as src) {
+          <img
+            class="team-logo"
+            [src]="src"
+            [alt]="row.teamName"
+            width="22"
+            height="20"
+            (error)="logoFailed(row.teamName)"
+          />
+        } @else {
+          <span class="team-bar" [style.background]="row.teamColour"></span>
+        }
         <span class="acronym">{{ row.acronym }}</span>
         @if (slot(row.driverNumber); as s) {
           <span class="slot">{{ s }}</span>
