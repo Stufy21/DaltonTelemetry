@@ -14,6 +14,25 @@ const driver = (n: number, acronym: string): OF1Driver => ({
   headshot_url: null,
 });
 
+const msg = (
+  s: number,
+  category: string,
+  flag: string | null,
+  message: string,
+  scope: string | null = null,
+  sector: number | null = null,
+  lap = 5,
+) => ({
+  date: iso(s),
+  driver_number: null,
+  lap_number: lap,
+  category,
+  flag,
+  scope,
+  sector,
+  message,
+});
+
 const lap = (
   d: number,
   n: number,
@@ -324,29 +343,36 @@ describe('TimingDataset', () => {
     expect(at(115).inPit).toBe(true);
   });
 
+  it('does not call a car in the pits once the chequered flag has been shown', () => {
+    const ds = new TimingDataset();
+    ds.setDrivers([driver(3, 'CCC')]);
+    ds.mergeLaps([lap(3, 1, 0, 100, [30, 40, 30])]);
+    ds.addRaceControl([
+      msg(105, 'Flag', 'CHEQUERED', 'CHEQUERED FLAG'),
+      msg(110, 'Other', null, 'ALL PASS HOLDERS MAY ACCESS THE PIT LANE', null),
+    ]);
+
+    const at = (s: number) => ds.rows(T0 + s * 1000).find((r) => r.acronym === 'CCC')!;
+    expect(at(115).inPit).toBe(false);
+  });
+
+  it('still calls a car in the pits before the chequered flag has been shown', () => {
+    const ds = new TimingDataset();
+    ds.setDrivers([driver(3, 'CCC')]);
+    ds.mergeLaps([lap(3, 1, 0, 100, [30, 40, 30])]);
+    ds.addRaceControl([msg(200, 'Flag', 'CHEQUERED', 'CHEQUERED FLAG')]);
+
+    const at = (s: number) => ds.rows(T0 + s * 1000).find((r) => r.acronym === 'CCC')!;
+    expect(at(115).inPit).toBe(true);
+  });
+
   it('derives the track status from the latest relevant race control message', () => {
     const ds = build();
-    const msg = (
-      s: number,
-      category: string,
-      flag: string | null,
-      message: string,
-      scope: string | null = 'Track',
-    ) => ({
-      date: iso(s),
-      driver_number: null,
-      lap_number: null,
-      category,
-      flag,
-      scope,
-      sector: null,
-      message,
-    });
     ds.addRaceControl([
-      msg(0, 'Flag', 'GREEN', 'GREEN LIGHT - PIT EXIT OPEN'),
-      msg(50, 'SafetyCar', null, 'SAFETY CAR DEPLOYED', null),
-      msg(60, 'Other', null, 'SOMETHING ELSE', null),
-      msg(120, 'Flag', 'CLEAR', 'TRACK CLEAR'),
+      msg(0, 'Flag', 'GREEN', 'GREEN LIGHT - PIT EXIT OPEN', 'Track'),
+      msg(50, 'SafetyCar', null, 'SAFETY CAR DEPLOYED', 'Track'),
+      msg(60, 'Other', null, 'SOMETHING ELSE', 'Track'),
+      msg(120, 'Flag', 'CLEAR', 'TRACK CLEAR', 'Track'),
     ]);
     expect(ds.trackStatus(T0 + 10_000).tone).toBe('green');
     expect(ds.trackStatus(T0 + 70_000).tone).toBe('sc');
@@ -365,25 +391,6 @@ describe('TimingDataset', () => {
 });
 
 describe('TimingDataset flag segments', () => {
-  const msg = (
-    s: number,
-    category: string,
-    flag: string | null,
-    message: string,
-    scope: string | null = null,
-    sector: number | null = null,
-    lap = 5,
-  ) => ({
-    date: iso(s),
-    driver_number: null,
-    lap_number: lap,
-    category,
-    flag,
-    scope,
-    sector,
-    message,
-  });
-
   const segmentsFor = (rows: ReturnType<typeof msg>[], end = 1000) => {
     const ds = new TimingDataset();
     ds.addRaceControl(rows);
