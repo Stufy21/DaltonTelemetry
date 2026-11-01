@@ -25,6 +25,14 @@ export class UsedElementsComponent {
 
   protected readonly penalties = computed(() => penaltiesByDriver(this.snapshot.penalties));
 
+  /** "Ryo Hirakawa (50) drives for Esteban Ocon": one line per stand-in. */
+  protected readonly substitutes = computed(() =>
+    this.snapshot.substitutes.map((s) => {
+      const replaced = this.snapshot.drivers.find((d) => d.car === s.replaces)?.driver;
+      return { ...s, replacing: replaced ? ` in place of ${replaced}` : '' };
+    }),
+  );
+
   protected state(driver: PuDriverUsage, index: number): string {
     const e = this.elements[index];
     return usageState(driver.used[e.key], e.limit);

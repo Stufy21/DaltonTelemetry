@@ -11,7 +11,8 @@ Per event it combines three kinds of public FIA documents:
   * "PU Elements used per Driver up to now": the season counts before this weekend;
   * "New PU elements for this Competition" (one or more): who fitted a new element, and the count
     they had before (the new total is that plus one);
-  * the Stewards' decisions "... PU element(s)": the grid penalties that follow.
+  * the Stewards' decisions "... PU element(s)": the grid penalties that follow;
+  * the latest entry list, to tell who is actually racing (a driver can be replaced mid-season).
 The counts are only as good as those documents: if the FIA changes their layout this stops with an
 error rather than writing wrong numbers.
 """
@@ -33,6 +34,10 @@ OUTPUT = Path(__file__).resolve().parents[2] / 'src/app/dashboards/used-elements
 # Column order of the "used up to now" table.
 ELEMENTS = ['ICE', 'TC', 'EXH', 'MGU-K', 'ES', 'PU-CE', 'PU-ANC']
 ELEMENT_RE = '|'.join(re.escape(e) for e in ELEMENTS)
+
+# The FIA's table has typos now and then (the Mexico one prints "i" instead of 18 for Stroll). A row
+# whose car number is not a number is read by driver name from here, or the script stops.
+CAR_NUMBER_FIXES = {'Lance Stroll': 18}
 
 
 def fetch(url):
@@ -67,15 +72,23 @@ def documents(html):
 
 def parse_used(text):
     """{car number: (team, driver, {element: count})} from the "used up to now" table."""
+    counts = ' '.join([r'(\d+)'] * len(ELEMENTS))
+    pattern = re.compile(r'^(\S+) (.+) ' + counts + r'$', re.M)
     rows = {}
-    pattern = re.compile(r'^(\d{1,2}) (.+) ' + ' '.join([r'(\d+)'] * len(ELEMENTS)) + r'$', re.M)
     for m in pattern.finditer(text):
         who = m.group(2).split()
         # The table gives "<team> <first name> <last name>": every driver has two name words.
         driver, team = ' '.join(who[-2:]), ' '.join(who[:-2])
-        rows[int(m.group(1))] = (team, driver, dict(zip(ELEMENTS, map(int, m.groups()[2:]))))
-    if not 18 <= len(rows) <= 24:
-        sys.exit(f'Read {len(rows)} drivers from the "used up to now" table; the layout changed?')
+        number = m.group(1)
+        if not number.isdigit():
+            if driver not in CAR_NUMBER_FIXES:
+                sys.exit(f'Row of {driver} has the car number "{number}": add them to CAR_NUMBER_FIXES.')
+            number = CAR_NUMBER_FIXES[driver]
+        rows[int(number)] = (team, driver, dict(zip(ELEMENTS, map(int, m.groups()[2:]))))
+    # every row ends in seven numbers: if the count differs, a row was lost
+    candidates = len(re.findall(r'(?: \d+){%d}$' % len(ELEMENTS), text, re.M))
+    if len(rows) != candidates or not 18 <= len(rows) <= 24:
+        sys.exit(f'Read {len(rows)} drivers but the table has {candidates} rows; the layout changed?')
     return rows
 
 
@@ -88,6 +101,21 @@ def parse_new(text):
         for m in re.finditer(r'^(\d{1,2}) .+? (\d+)$', section, re.M):
             found.append((element, int(m.group(1)), int(m.group(2))))
     return found
+
+
+def parse_entry_list(text, teams):
+    """[(car number, TLA, driver name, constructor)] from an entry list. The constructor is the
+    team name as the "used up to now" table writes it, found at the end of each row."""
+    entries = []
+    for m in re.finditer(r'^(\d{1,2}) ([A-Z]{3}) (.+)$', text, re.M):
+        words = m.group(3).split()
+        nationality = next((i for i, w in enumerate(words) if re.fullmatch(r'[A-Z]{3}', w)), None)
+        if nationality is None:
+            continue
+        rest = ' '.join(words[nationality + 1:])
+        team = next((t for t in teams if rest.endswith(t)), rest)
+        entries.append((int(m.group(1)), m.group(2), ' '.join(words[:nationality]), team))
+    return entries
 
 
 def parse_penalty(text):
@@ -125,6 +153,17 @@ def main():
                 sys.exit(f'Car {car} in {path} is not in the "used up to now" table.')
             fitted[(car, element)] = max(fitted.get((car, element), 0), before + 1)
 
+    # The newest entry list tells who is really racing: a driver can be replaced after the elements
+    # report is out (Hirakawa for Ocon in Mexico) and the report keeps listing the old one.
+    lists = []
+    for path in (p for p in paths if p.endswith('entry_list.pdf') or '_entry_list' in p):
+        text = pdf_text(FIA + path)
+        number = re.search(r'Document (\d+)', text)
+        lists.append((int(number.group(1)) if number else 0, text))
+    teams = sorted({team for team, _, _ in drivers.values()}, key=len, reverse=True)
+    racing = parse_entry_list(max(lists)[1], teams) if lists else []
+    entered = {car for car, _, _, _ in racing}
+
     entries = []
     for car, (team, driver, counts) in drivers.items():  # the FIA lists the teams in championship order
         total = dict(counts)
@@ -133,17 +172,33 @@ def main():
             if (car, element) in fitted:
                 total[element] = max(total[element], fitted[(car, element)])
                 new_now.append(element)
-        entries.append({'car': car, 'driver': driver, 'team': team, 'used': total, 'new': new_now})
+        row = {'car': car, 'driver': driver, 'team': team, 'used': total, 'new': new_now}
+        if racing and car not in entered:
+            row['notRacing'] = True
+        entries.append(row)
+    # drivers on the entry list with no row in the elements report
+    absent = {e['team']: e['car'] for e in entries if e.get('notRacing')}
+    substitutes = [
+        {'car': car, 'driver': name, 'team': team, 'replaces': absent.get(team)}
+        for car, _, name, team in racing
+        if car not in drivers
+    ]
     sanctions = [parse_penalty(pdf_text(FIA + p)) for p in penalties]
 
     title = slug.replace('_', ' ').title()
-    data = {'season': SEASON, 'event': title, 'drivers': entries, 'penalties': sanctions}
+    data = {
+        'season': SEASON,
+        'event': title,
+        'drivers': entries,
+        'substitutes': substitutes,
+        'penalties': sanctions,
+    }
     OUTPUT.write_text(
         '// Generated by scripts/fia/pu-elements.py from the FIA race documents. Do not edit by hand.\n'
         "import { PuElementsSnapshot } from './pu-elements.model';\n\n"
         f'export const PU_ELEMENTS: PuElementsSnapshot = {json.dumps(data, indent=2, ensure_ascii=False)};\n'
     )
-    print(f'{title}: {len(entries)} drivers, {len(fitted)} new elements, {len(sanctions)} penalties -> {OUTPUT}')
+    print(f'{title}: {len(entries)} drivers, {len(fitted)} new elements, {len(sanctions)} penalties, {len(substitutes)} substitutes -> {OUTPUT}')
 
 
 if __name__ == '__main__':

@@ -20,6 +20,17 @@ export interface PuDriverUsage {
   used: Record<PuElementKey, number>;
   /** Elements fitted new this weekend. */
   new: PuElementKey[];
+  /** Left out of the latest entry list: replaced for this event. */
+  notRacing?: boolean;
+}
+
+/** A driver on the entry list with no row in the elements report (a stand-in). */
+export interface PuSubstitute {
+  car: number;
+  driver: string;
+  team: string;
+  /** The car number of the driver this one replaces, when it can be told. */
+  replaces: number | null;
 }
 
 export interface PuPenalty {
@@ -35,5 +46,6 @@ export interface PuElementsSnapshot {
   season: number;
   event: string;
   drivers: PuDriverUsage[];
+  substitutes: PuSubstitute[];
   penalties: PuPenalty[];
 }
