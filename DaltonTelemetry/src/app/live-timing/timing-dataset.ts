@@ -504,15 +504,16 @@ export class TimingDataset {
     if (!last || last.lap.lap_duration == null || !Number.isFinite(last.end)) return false;
     const next = track[done];
 
-    const chequeredShown = this.raceControl
-      .entries()
-      .some((x) => x.t <= t && x.v.flag === 'CHEQUERED');
-
     // normally the next lap starts the moment this one ends; when it is not there yet, wait long
     // enough for the live feed to deliver it before calling it a stop
     return next
       ? next.start - last.end > PIT_GAP_MS && t < next.start
-      : !chequeredShown && t - last.end > LIVE_PIT_WAIT_MS;
+      : !this.chequeredShown(t) && t - last.end > LIVE_PIT_WAIT_MS;
+  }
+
+  /** Whether the chequered flag has been shown by time `t`. */
+  chequeredShown(t: number): boolean {
+    return this.raceControl.entries().some((x) => x.t <= t && x.v.flag === 'CHEQUERED');
   }
 
   private overallBest(

@@ -22,6 +22,7 @@ import {
   OUTLINE_CANDIDATES,
   OutlineSample,
 } from './outline';
+import { liveWindowEnd, LIVE_OVERRUN_MS } from './live-window';
 import { pollCadence } from './polling';
 import { scheduledLaps } from './race-distance';
 import { LapSummary, Point, TimingDataset } from './timing-dataset';
@@ -29,13 +30,13 @@ import { LapSummary, Point, TimingDataset } from './timing-dataset';
 const TICK_MS = 250;
 
 /**
- * A session is considered live from before it starts to a while after the scheduled end. The window
- * before the start is an hour, not the 15 minutes before which OpenF1 itself opens a session: our
- * own recorder starts earlier and the grid, drivers and cars are worth seeing before the start. A
- * session listed any earlier would be treated as finished, and its partial data cached.
+ * A session is considered live from before it starts until shortly after the chequered flag (see
+ * `liveWindowEnd`). The window before the start is an hour, not the 15 minutes before which OpenF1
+ * itself opens a session: our own recorder starts earlier and the grid, drivers and cars are worth
+ * seeing before the start. A session listed any earlier would be treated as finished, and its
+ * partial data cached.
  */
 const LIVE_WINDOW_BEFORE_MS = 60 * 60_000;
-const LIVE_WINDOW_AFTER_MS = 10 * 60_000;
 const RECENT_LAPS_WINDOW_MS = 5 * 60_000;
 
 /** Car coordinates are huge, so replay loads them in time windows around the playhead. */
@@ -299,13 +300,15 @@ export class LiveTimingStore {
 
     const key = session.session_key;
     const t = Date.now();
-    const live =
+    const scheduledEnd = Date.parse(session.date_end);
+    // Whether the flag has fallen is only known once the data is in, so this errs on the live side.
+    const maybeLive =
       t >= Date.parse(session.date_start) - LIVE_WINDOW_BEFORE_MS &&
-      t <= Date.parse(session.date_end) + LIVE_WINDOW_AFTER_MS;
+      t <= scheduledEnd + LIVE_OVERRUN_MS;
     // Finished sessions never change, so they can be served from the browser cache.
-    const cache = !live;
+    const cache = !maybeLive;
     // A live session's REST data needs the server's token, and updates arrive by stream.
-    const relay = live && this.relayAvailable;
+    const relay = maybeLive && this.relayAvailable;
     this.api.useRelay(relay);
     this.relayActive.set(relay);
 
@@ -341,6 +344,8 @@ export class LiveTimingStore {
           location: new Date(t - this.cadence.mapLag * 2).toISOString(),
         };
 
+        const live = maybeLive && t <= liveWindowEnd(scheduledEnd, ds.chequeredShown(t));
+
         this.sessionLive.set(live);
         this.following.set(live);
         this.liveEdge.set(t - this.delay() * 1000);
@@ -348,7 +353,7 @@ export class LiveTimingStore {
         this.loading.set(false);
         this.version.update((v) => v + 1);
         this.loadOutline(generation, cache);
-        if (relay) this.startStream(key, generation);
+        if (live && relay) this.startStream(key, generation);
         else if (live) this.startPolling(key, generation);
       },
       error: (err) => {
@@ -454,7 +459,7 @@ export class LiveTimingStore {
     if (
       this.sessionLive() &&
       session &&
-      edge > Date.parse(session.date_end) + LIVE_WINDOW_AFTER_MS
+      edge > liveWindowEnd(Date.parse(session.date_end), this.dataset.chequeredShown(edge))
     ) {
       this.sessionLive.set(false);
       this.following.set(false);
