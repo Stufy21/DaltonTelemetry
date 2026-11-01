@@ -109,8 +109,10 @@ python scripts/fia/pu-elements.py "Mexico City Grand Prix"  # a specific event
 ```
 
 Run it after each race weekend, once the reports are out (Thursday, updated through the weekend),
-and commit the regenerated file. The script stops with an error instead of writing numbers when a
-document does not look as expected.
+and commit the regenerated file. It also reads the latest entry list, so a driver replaced for the
+event is marked as not racing and the stand-in is named. The script stops with an error instead of
+writing numbers when a document does not look as expected; the FIA's table has typos now and then
+(a car number printed as "i"), which are listed in `CAR_NUMBER_FIXES` in the script.
 
 ## Self-hosted OpenF1 (live data without the sponsor plan)
 

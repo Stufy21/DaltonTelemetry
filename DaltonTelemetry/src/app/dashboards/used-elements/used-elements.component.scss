@@ -141,6 +141,36 @@ tbody tr + tr > * {
   }
 }
 
+/* a driver who is not racing this weekend keeps his row, dimmed */
+.not-racing {
+  opacity: 0.5;
+}
+
+.substitutes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--dt-card);
+    border: 1px solid var(--dt-border);
+    border-radius: var(--dt-radius);
+  }
+
+  mat-icon {
+    flex-shrink: 0;
+    color: var(--mat-sys-primary);
+  }
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;

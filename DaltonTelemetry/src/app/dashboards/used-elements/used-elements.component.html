@@ -22,12 +22,17 @@
         </thead>
         <tbody>
           @for (d of rows(); track d.car) {
-            <tr>
+            <tr [class.not-racing]="d.notRacing">
               <th scope="row" class="who">
                 <span class="bar" [style.background]="d.colour"></span>
                 <span class="name">
                   <strong>{{ d.driver }}</strong>
-                  <span class="team">{{ d.team }}</span>
+                  <span class="team"
+                    >{{ d.team }}
+                    @if (d.notRacing) {
+                      · not racing
+                    }
+                  </span>
                 </span>
               </th>
               @for (e of elements; track e.key; let i = $index) {
@@ -51,6 +56,21 @@
       <li><span class="swatch fresh"></span>fitted new this weekend</li>
     </ul>
   </div>
+
+  @if (substitutes().length) {
+    <ul class="substitutes">
+      @for (s of substitutes(); track s.car) {
+        <li>
+          <mat-icon aria-hidden="true">swap_horiz</mat-icon>
+          <span>
+            <strong>{{ s.driver }}</strong> (car {{ s.car }}) drives for {{ s.team
+            }}{{ s.replacing }}. His power unit parts are not in the FIA's report, so he has no row
+            here.
+          </span>
+        </li>
+      }
+    </ul>
+  }
 
   @if (penalties().length) {
     <h3>Grid penalties for power unit parts</h3>
