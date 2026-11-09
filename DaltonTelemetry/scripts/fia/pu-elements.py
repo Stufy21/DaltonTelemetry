@@ -20,6 +20,8 @@ import io
 import json
 import re
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -42,8 +44,14 @@ CAR_NUMBER_FIXES = {'Lance Stroll': 18}
 
 def fetch(url):
     request = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-    with urllib.request.urlopen(request, timeout=60) as response:
-        return response.read()
+    for attempt in range(6):
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                return response.read()
+        except urllib.error.HTTPError as error:
+            if error.code != 429 or attempt == 5:  # the FIA answers 429 when asked too fast
+                raise
+            time.sleep(20 * (attempt + 1))
 
 
 def pdf_text(url):
@@ -107,14 +115,18 @@ def parse_entry_list(text, teams):
     """[(car number, TLA, driver name, constructor)] from an entry list. The constructor is the
     team name as the "used up to now" table writes it, found at the end of each row."""
     entries = []
-    for m in re.finditer(r'^(\d{1,2}) ([A-Z]{3}) (.+)$', text, re.M):
+    # the drivers listed after this line may only take part in FP1, they are not racing
+    text = text.split('In addition to the list')[0]
+    for m in re.finditer(r'^(\d{1,3}) ([A-Z]{3}) (.+)$', text, re.M):
         words = m.group(3).split()
         nationality = next((i for i, w in enumerate(words) if re.fullmatch(r'[A-Z]{3}', w)), None)
         if nationality is None:
             continue
         rest = ' '.join(words[nationality + 1:])
         team = next((t for t in teams if rest.endswith(t)), rest)
-        entries.append((int(m.group(1)), m.group(2), ' '.join(words[:nationality]), team))
+        # a footnote mark printed after some numbers is read as one more digit (81 as "811")
+        number = int(m.group(1)[:2])
+        entries.append((number, m.group(2), ' '.join(words[:nationality]), team))
     return entries
 
 
@@ -135,6 +147,26 @@ def parse_penalty(text):
     }
 
 
+def take_over(drivers, car, element, before, racing, entered, text):
+    """A driver fitting a new element who has no row in the "used up to now" table has taken over a
+    seat whose row the table still lists under the old driver (Camara for Ocon in Brazil, the table
+    printing Hirakawa, who stood in for Ocon in Mexico). The row is handed to the new driver: it
+    must be the only team row of a car that is not on the entry list, and the "previously used"
+    count in the report must match it, or the script stops."""
+    team = next((t for c, _, _, t in racing if c == car), None)
+    free = [c for c, (t, _, _) in drivers.items() if t == team and c not in entered]
+    if len(free) != 1 or drivers[free[0]][2][element] != before:
+        sys.exit(f'Car {car} in the new elements report is not in the "used up to now" table.')
+    # the report spells the name with its accents ("Rafael Câmara"), the entry list does not
+    named = re.search(rf'^{car} {re.escape(team)} (.+?) \d+$', text, re.M)
+    name = named.group(1) if named else next(n for c, _, n, _ in racing if c == car)
+    rebuilt = {}
+    for c, row in drivers.items():  # keeps the FIA's order of the teams
+        rebuilt[car if c == free[0] else c] = (team, name, row[2]) if c == free[0] else row
+    drivers.clear()
+    drivers.update(rebuilt)
+
+
 def main():
     name = sys.argv[1] if len(sys.argv) > 1 else None
     slug, paths = documents(fetch(event_page(name)).decode('utf-8', 'replace'))
@@ -146,12 +178,6 @@ def main():
         sys.exit(f'Expected one "used up to now" document for {slug}, found {len(used)}.')
 
     drivers = parse_used(pdf_text(FIA + used[0]))
-    fitted = {}
-    for path in new:
-        for element, car, before in parse_new(pdf_text(FIA + path)):
-            if car not in drivers:
-                sys.exit(f'Car {car} in {path} is not in the "used up to now" table.')
-            fitted[(car, element)] = max(fitted.get((car, element), 0), before + 1)
 
     # The newest entry list tells who is really racing: a driver can be replaced after the elements
     # report is out (Hirakawa for Ocon in Mexico) and the report keeps listing the old one.
@@ -163,6 +189,17 @@ def main():
     teams = sorted({team for team, _, _ in drivers.values()}, key=len, reverse=True)
     racing = parse_entry_list(max(lists)[1], teams) if lists else []
     entered = {car for car, _, _, _ in racing}
+
+    fitted = {}
+    for path in new:
+        text = pdf_text(FIA + path)
+        for element, car, before in parse_new(text):
+            if car not in drivers:
+                take_over(drivers, car, element, before, racing, entered, text)
+            fitted[(car, element)] = max(fitted.get((car, element), 0), before + 1)
+
+    if racing and len(racing) != len(drivers):
+        sys.exit(f'The entry list has {len(racing)} cars but the elements table {len(drivers)}.')
 
     entries = []
     for car, (team, driver, counts) in drivers.items():  # the FIA lists the teams in championship order
@@ -185,7 +222,7 @@ def main():
     ]
     sanctions = [parse_penalty(pdf_text(FIA + p)) for p in penalties]
 
-    title = slug.replace('_', ' ').title()
+    title = f'{SEASON} {name}' if name else slug.replace('_', ' ').title()
     data = {
         'season': SEASON,
         'event': title,

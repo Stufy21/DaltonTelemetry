@@ -113,6 +113,9 @@ and commit the regenerated file. It also reads the latest entry list, so a drive
 event is marked as not racing and the stand-in is named. The script stops with an error instead of
 writing numbers when a document does not look as expected; the FIA's table has typos now and then
 (a car number printed as "i"), which are listed in `CAR_NUMBER_FIXES` in the script.
+When a seat changes for good (Ocon's went to Camara in Brazil) the table keeps listing the old
+driver: the script gives that row to the new driver when the elements report names him with the
+count the old row has, and stops if it cannot tell which row it is.
 
 ## Self-hosted OpenF1 (live data without the sponsor plan)
 
