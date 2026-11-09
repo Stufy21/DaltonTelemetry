@@ -3,7 +3,7 @@ import { PuElementsSnapshot } from './pu-elements.model';
 
 export const PU_ELEMENTS: PuElementsSnapshot = {
   "season": 2026,
-  "event": "2026 Mexico City Grand Prix",
+  "event": "2026 São Paulo Grand Prix",
   "drivers": [
     {
       "car": 81,
@@ -40,15 +40,18 @@ export const PU_ELEMENTS: PuElementsSnapshot = {
       "driver": "George Russell",
       "team": "Mercedes",
       "used": {
-        "ICE": 5,
+        "ICE": 6,
         "TC": 5,
         "EXH": 5,
         "MGU-K": 4,
         "ES": 4,
         "PU-CE": 4,
-        "PU-ANC": 5
+        "PU-ANC": 6
       },
-      "new": []
+      "new": [
+        "ICE",
+        "PU-ANC"
+      ]
     },
     {
       "car": 12,
@@ -70,15 +73,20 @@ export const PU_ELEMENTS: PuElementsSnapshot = {
       "driver": "Max Verstappen",
       "team": "Red Bull Racing RB Ford",
       "used": {
-        "ICE": 4,
-        "TC": 4,
-        "EXH": 4,
+        "ICE": 5,
+        "TC": 5,
+        "EXH": 5,
         "MGU-K": 3,
         "ES": 3,
         "PU-CE": 3,
-        "PU-ANC": 5
+        "PU-ANC": 6
       },
-      "new": []
+      "new": [
+        "ICE",
+        "TC",
+        "EXH",
+        "PU-ANC"
+      ]
     },
     {
       "car": 6,
@@ -100,7 +108,7 @@ export const PU_ELEMENTS: PuElementsSnapshot = {
       "driver": "Charles Leclerc",
       "team": "Ferrari",
       "used": {
-        "ICE": 4,
+        "ICE": 5,
         "TC": 4,
         "EXH": 4,
         "MGU-K": 3,
@@ -108,22 +116,32 @@ export const PU_ELEMENTS: PuElementsSnapshot = {
         "PU-CE": 3,
         "PU-ANC": 6
       },
-      "new": []
+      "new": [
+        "ICE"
+      ]
     },
     {
       "car": 44,
       "driver": "Lewis Hamilton",
       "team": "Ferrari",
       "used": {
-        "ICE": 4,
-        "TC": 4,
-        "EXH": 4,
-        "MGU-K": 3,
-        "ES": 3,
-        "PU-CE": 3,
-        "PU-ANC": 6
+        "ICE": 6,
+        "TC": 5,
+        "EXH": 5,
+        "MGU-K": 4,
+        "ES": 4,
+        "PU-CE": 4,
+        "PU-ANC": 7
       },
-      "new": []
+      "new": [
+        "ICE",
+        "TC",
+        "EXH",
+        "MGU-K",
+        "ES",
+        "PU-CE",
+        "PU-ANC"
+      ]
     },
     {
       "car": 23,
@@ -168,28 +186,22 @@ export const PU_ELEMENTS: PuElementsSnapshot = {
         "PU-CE": 3,
         "PU-ANC": 6
       },
-      "new": [
-        "ES",
-        "PU-CE"
-      ]
+      "new": []
     },
     {
       "car": 30,
       "driver": "Liam Lawson",
       "team": "Racing Bulls RB Ford",
       "used": {
-        "ICE": 4,
-        "TC": 4,
-        "EXH": 4,
+        "ICE": 5,
+        "TC": 5,
+        "EXH": 5,
         "MGU-K": 2,
         "ES": 3,
         "PU-CE": 3,
-        "PU-ANC": 6
+        "PU-ANC": 7
       },
-      "new": [
-        "ES",
-        "PU-CE"
-      ]
+      "new": []
     },
     {
       "car": 18,
@@ -222,8 +234,8 @@ export const PU_ELEMENTS: PuElementsSnapshot = {
       "new": []
     },
     {
-      "car": 31,
-      "driver": "Esteban Ocon",
+      "car": 51,
+      "driver": "Rafael Câmara",
       "team": "Haas Ferrari",
       "used": {
         "ICE": 4,
@@ -232,10 +244,11 @@ export const PU_ELEMENTS: PuElementsSnapshot = {
         "MGU-K": 3,
         "ES": 3,
         "PU-CE": 3,
-        "PU-ANC": 5
+        "PU-ANC": 6
       },
-      "new": [],
-      "notRacing": true
+      "new": [
+        "PU-ANC"
+      ]
     },
     {
       "car": 87,
@@ -265,10 +278,7 @@ export const PU_ELEMENTS: PuElementsSnapshot = {
         "PU-CE": 3,
         "PU-ANC": 5
       },
-      "new": [
-        "ES",
-        "PU-CE"
-      ]
+      "new": []
     },
     {
       "car": 5,
@@ -320,15 +330,20 @@ export const PU_ELEMENTS: PuElementsSnapshot = {
       "driver": "Sergio Perez",
       "team": "Cadillac Ferrari",
       "used": {
-        "ICE": 4,
-        "TC": 4,
+        "ICE": 5,
+        "TC": 5,
         "EXH": 4,
-        "MGU-K": 3,
+        "MGU-K": 4,
         "ES": 3,
         "PU-CE": 3,
-        "PU-ANC": 4
+        "PU-ANC": 5
       },
-      "new": []
+      "new": [
+        "ICE",
+        "TC",
+        "MGU-K",
+        "PU-ANC"
+      ]
     },
     {
       "car": 77,
@@ -341,32 +356,68 @@ export const PU_ELEMENTS: PuElementsSnapshot = {
         "MGU-K": 4,
         "ES": 4,
         "PU-CE": 4,
-        "PU-ANC": 4
+        "PU-ANC": 5
       },
-      "new": [
-        "ICE",
-        "TC",
-        "MGU-K",
-        "ES",
-        "PU-CE"
-      ]
+      "new": []
     }
   ],
-  "substitutes": [
-    {
-      "car": 50,
-      "driver": "Ryo Hirakawa",
-      "team": "Haas Ferrari",
-      "replaces": 31
-    }
-  ],
+  "substitutes": [],
   "penalties": [
     {
-      "car": 77,
-      "driver": "Valtteri Bottas",
-      "places": 50,
-      "decision": "Drop of 50 grid positions for the next Race in which the driver participates.",
-      "document": 17
+      "car": 11,
+      "driver": "Sergio Perez",
+      "places": 30,
+      "decision": "Drop of 30 grid positions for the next Race in which the driver participates.",
+      "document": 39
+    },
+    {
+      "car": 16,
+      "driver": "Charles Leclerc",
+      "places": 10,
+      "decision": "Drop of 10 grid positions for the next Race in which the driver participates.",
+      "document": 35
+    },
+    {
+      "car": 3,
+      "driver": "Max Verstappen",
+      "places": 30,
+      "decision": "Drop of 30 grid positions for the next Race in which the driver participates.",
+      "document": 33
+    },
+    {
+      "car": 41,
+      "driver": "Arvid Lindblad",
+      "places": 10,
+      "decision": "Drop of 10 grid positions for the next Race in which the driver participates.",
+      "document": 56
+    },
+    {
+      "car": 44,
+      "driver": "Lewis Hamilton",
+      "places": 65,
+      "decision": "Drop of 65 grid positions for the next Race in which the driver participates.",
+      "document": 43
+    },
+    {
+      "car": 44,
+      "driver": "Lewis Hamilton",
+      "places": 10,
+      "decision": "Drop of 10 grid positions for the next Race in which the driver participates.",
+      "document": 37
+    },
+    {
+      "car": 5,
+      "driver": "Gabriel Bortoleto",
+      "places": 10,
+      "decision": "Drop of 10 grid positions for the next Race in which the driver participates.",
+      "document": 57
+    },
+    {
+      "car": 63,
+      "driver": "George Russell",
+      "places": 5,
+      "decision": "Drop of 5 grid positions for the next Race in which the driver participates.",
+      "document": 15
     }
   ]
 };
